@@ -1,0 +1,578 @@
+[
+  {
+    "name": "Bolsa de Equipaje Mano",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Maleta con Candados",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Cartera de Documentacion",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Traje 3 / 5 mm / 2 piezas o Shorty",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Pasaporte (en Regla)",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Chaleco",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Tarjeta Puntos Cia Aerea",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Escarpines",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Documentacion Viaje + Avion + Barco",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Aletas",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Tarjetas de crédito",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Jacket",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Regulador + Octopus + Manometro + Caja",
+    "category": "SUBMARINISMO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Ordenador + Pila repuesto",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Euros para Consumo",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Mascara",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Euros para Compras",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Mascara Repuesto",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Euros para Urgencias",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Boya señalización",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Euros para Propinas",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Avisador",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Euros para Tasas Parque Marino",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Foco + Cargador + Baterias + Caja",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Red guarda material",
+    "category": "MEDIOS DE PAGO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Líquido antivaho máscara",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Bolsa Botiquin",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Toalla post inmersión",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Resfriado (Frenadol)",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Bañador Buceo",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Antinflamatorio (Iboprufeno)",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Bañador Corto",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Antiácido (almax)",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Carnet de buceador",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Antihistamínico (polaramine)",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Licencia Actividades Subacuáticas",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Antimareos (Biodramina, Marezine,Meclizine)",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Logbook Libro registro de inmersiones",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Pomadas quemaduras, golpes",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Logbook Hojas registro de inmersiones (30)",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Colirio (colircusi gentadexa)",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Barra protectora labios",
+    "category": "MEDICAMENTOS / PROTECCIÓN",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Tiritas",
+    "category": "ELECTRONICA / FOTOGRAFIA - MOVIL - TABLET",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Bolsa de Material (Cables)",
+    "category": "ELECTRONICA / FOTOGRAFIA - MOVIL - TABLET",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Tapones oidos",
+    "category": "ELECTRONICA / FOTOGRAFIA - MOVIL - TABLET",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Bateria extra Movil + Cable",
+    "category": "ELECTRONICA / FOTOGRAFIA - MOVIL - TABLET",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Medicacion Propia (Tension)",
+    "category": "ELECTRONICA / FOTOGRAFIA - MOVIL - TABLET",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Cargador Movil + Cable",
+    "category": "ELECTRONICA / FOTOGRAFIA - MOVIL - TABLET",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Camara Fotos + Cargador + Cable + Tarjeta Memo + Caja",
+    "category": "ELECTRONICA / FOTOGRAFIA - MOVIL - TABLET",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Tablet + Cargador + Cable + Tarjeta Memo",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Bolsas separadoras",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Video + Cargador + Cable + Tarjeta Memo + Filtro + Caja",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Zapatos Viaje",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Foco Video + Cable + Filtro + Soporte",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Pantalon Viaje",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Auriculares (Repuesto) + Adaptador",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Camiseta Viaje",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Adapatador Corriente",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Jersey Viaje",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Chaqueta Viaje",
+    "category": "ROPA - CALZADO",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Muda Viaje Ida (Camiseta, Ropa interior)",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Kit Avion (Cepillo + Dentífrico + Tapones Oidos)",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Muda Viaje Vuelta (Camiseta, Ropa interior)",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Neceser",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Zapatos o Bambas",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Dentífrico",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Zapatilla Playa",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Cepillo de dientes",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Calcetines",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Crema de manos",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Ropa interior",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Gel",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Camisetas Buceo",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Acondicionador",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Camisetas",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Desodorante",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Pantalon Largo",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Espuma de afeitar",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Pantalon Corto",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Maquinilla afeitar + Recambios",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Pantalon Corto o Bañador",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Colonia",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Toalla baño",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Crema solar",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Pijama",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Crema hidratante",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Gorra",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Bastoncillos oidos",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Gafas de sol",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Toalla baño",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Pañuelo Cuello",
+    "category": "HIGIENE",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Gafas de Ver",
+    "category": "VARIOS",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Peliculas",
+    "category": "VARIOS",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Musica",
+    "category": "VARIOS",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Cartas / dados",
+    "category": "VARIOS",
+    "packed": false,
+    "quantity": 1
+  },
+  {
+    "name": "Papel y bolígrafos",
+    "category": "VARIOS",
+    "packed": false,
+    "quantity": 1
+  }
+]

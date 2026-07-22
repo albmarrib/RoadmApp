@@ -13,6 +13,7 @@ import DashboardPage from './features/trips/pages/DashboardPage';
 import ItineraryPage from './features/itinerary/pages/ItineraryPage';
 import MapPage from './features/map/pages/MapPage';
 import DocumentsPage from './features/documents/pages/DocumentsPage';
+import PackingPage from './features/packing/pages/PackingPage';
 
 export default function App() {
   const { initialize } = useAuthStore();
@@ -42,7 +43,8 @@ export default function App() {
             <Route path="itinerary" element={<ItineraryPage />} />
             <Route path="map" element={<MapPage />} />
             <Route path="documents" element={<DocumentsPage />} />
-            {/* Próximas fases: packing, expenses */}
+            <Route path="packing" element={<PackingPage />} />
+            {/* Próximas fases: expenses */}
           </Route>
         </Route>
 
