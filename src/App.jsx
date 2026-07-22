@@ -4,29 +4,21 @@ import { useAuthStore } from './store/authStore';
 
 import AuthLayout from './layouts/AuthLayout';
 import AppLayout from './layouts/AppLayout';
+import TripLayout from './layouts/TripLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
-
-// Dashboard provisional vacío
-function Dashboard() {
-  return (
-    <div className="flex flex-col items-center justify-center h-[80vh] space-y-4">
-      <h2 className="text-3xl font-bold text-white">Mis Viajes</h2>
-      <p className="text-slate-400 text-center max-w-md">
-        De momento no hay datos mockeados. En la próxima fase usaremos el script seed para inyectar datos reales.
-      </p>
-    </div>
-  );
-}
+import DashboardPage from './features/trips/pages/DashboardPage';
+import ItineraryPage from './features/itinerary/pages/ItineraryPage';
+import MapPage from './features/map/pages/MapPage';
+import DocumentsPage from './features/documents/pages/DocumentsPage';
 
 export default function App() {
   const { initialize } = useAuthStore();
 
   useEffect(() => {
-    const unsubscribe = initialize();
-    return () => unsubscribe();
+    initialize();
   }, [initialize]);
 
   return (
@@ -38,10 +30,19 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
         </Route>
 
-        {/* Rutas Privadas */}
+        {/* Rutas Privadas Base */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<DashboardPage />} />
+          </Route>
+          
+          {/* Rutas dentro de un Viaje Específico */}
+          <Route path="/trip/:tripId" element={<TripLayout />}>
+            <Route index element={<Navigate to="itinerary" replace />} />
+            <Route path="itinerary" element={<ItineraryPage />} />
+            <Route path="map" element={<MapPage />} />
+            <Route path="documents" element={<DocumentsPage />} />
+            {/* Próximas fases: packing, expenses */}
           </Route>
         </Route>
 

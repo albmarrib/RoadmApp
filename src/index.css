@@ -7,3 +7,18 @@
     @apply antialiased;
   }
 }
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Fix leaflet zoom controls overlapping with filters */
+.leaflet-top.leaflet-left {
+  top: 70px !important;
+}
