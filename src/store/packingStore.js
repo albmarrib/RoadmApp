@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { db } from '../config/firebase';
 import { collection, query, onSnapshot, addDoc, deleteDoc, updateDoc, doc, writeBatch } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import defaultPackingList from '../config/defaultPackingList.json';
 
 export const usePackingStore = create((set, get) => ({
@@ -59,6 +60,19 @@ export const usePackingStore = create((set, get) => ({
       console.log("Plantilla base inyectada con éxito.");
     } catch (err) {
       console.error("Error seeding default list:", err);
+    }
+  },
+
+  uploadLuggagePhoto: async (tripId, file) => {
+    try {
+      const storage = getStorage();
+      const fileRef = ref(storage, `trips/${tripId}/luggage/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      return url;
+    } catch (err) {
+      console.error("Error uploading luggage photo:", err);
+      throw err;
     }
   },
 

@@ -1,8 +1,9 @@
 import { Outlet, useParams, Link, useLocation } from 'react-router-dom';
-import { Map, CalendarDays, Luggage, Wallet, ArrowLeft, FileText, CloudDownload, Loader2 } from 'lucide-react';
+import { Map, CalendarDays, Luggage, Wallet, ArrowLeft, FileText, CloudDownload, Loader2, Settings } from 'lucide-react';
 import { useTripStore } from '../store/tripStore';
 import { useAuthStore } from '../store/authStore';
 import { useEffect, useState } from 'react';
+import TripSettingsModal from '../features/trips/components/TripSettingsModal';
 
 export default function TripLayout() {
   const { tripId } = useParams();
@@ -10,6 +11,7 @@ export default function TripLayout() {
   const { user } = useAuthStore();
   const location = useLocation();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (trips.length === 0 && user?.uid) {
@@ -38,6 +40,9 @@ export default function TripLayout() {
       const qDocs = query(collection(db, 'trips', trip.id, 'documents'));
       const docsSnap = await getDocs(qDocs);
       
+      const qPacking = query(collection(db, 'trips', trip.id, 'packing'));
+      const packingSnap = await getDocs(qPacking);
+      
       let urls = [];
       nodesSnap.forEach(doc => {
         if (doc.data().attachments) {
@@ -46,6 +51,9 @@ export default function TripLayout() {
       });
       docsSnap.forEach(doc => {
         if (doc.data().url) urls.push(doc.data().url);
+      });
+      packingSnap.forEach(doc => {
+        if (doc.data().photoUrl) urls.push(doc.data().photoUrl);
       });
       
       urls = [...new Set(urls)].filter(Boolean);
@@ -74,9 +82,9 @@ export default function TripLayout() {
       }
       
       if (failedUrls.length > 0) {
-        alert(`Se han sincronizado ${successCount} documentos.\nHubo problemas con ${failedUrls.length} documentos (posible error de permisos o CORS en la nube).`);
+        alert(`Se han sincronizado ${successCount} archivos (documentos y fotos).\nHubo problemas con ${failedUrls.length} archivos (posible error de permisos o CORS en la nube).`);
       } else {
-        alert(`¡Todo listo! Se han sincronizado y guardado ${successCount} documentos en tu dispositivo para uso sin conexión.\n\nRecuerda volver a usar este botón si añades nuevos archivos más adelante.`);
+        alert(`¡Todo listo! Se han sincronizado y guardado ${successCount} archivos en tu dispositivo para uso sin conexión.\n\nRecuerda volver a usar este botón si añades nuevos archivos o fotos de maletas más adelante.`);
       }
     } catch (error) {
       console.error(error);
@@ -135,13 +143,21 @@ export default function TripLayout() {
             </div>
 
             <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 text-slate-400 hover:text-teal-400 hover:bg-slate-800 rounded-full transition-colors"
+              title="Configuración del Viaje y Contactos"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+
+            <button 
               onClick={handleSyncOffline}
               disabled={isSyncing}
               className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"
               title="Guardar documentos para usarlos sin Internet"
             >
               {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
-              <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Activar Offline'}</span>
+              <span className="hidden sm:inline">{isSyncing ? 'Guardando...' : 'Sincronizar Offline'}</span>
             </button>
           </div>
           
@@ -170,6 +186,12 @@ export default function TripLayout() {
         {/* Aquí se inyecta ItineraryPage, MapPage, etc */}
         <Outlet context={{ trip }} /> 
       </main>
+
+      <TripSettingsModal 
+        trip={trip} 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+      />
     </div>
   );
 }

@@ -16,6 +16,7 @@
     "date-fns": "^3.6.0",
     "firebase": "^10.10.0",
     "framer-motion": "^11.0.24",
+    "html5-qrcode": "^2.3.8",
     "ics": "^3.7.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.364.0",

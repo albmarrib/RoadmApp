@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { usePackingStore } from '../../../store/packingStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Luggage, Check, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Luggage, Check, Plus, Trash2, ChevronDown, ChevronUp, ScanBarcode, X, Camera, Eye } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 
 export default function PackingPage() {
   const { trip } = useOutletContext();
@@ -13,12 +14,56 @@ export default function PackingPage() {
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState('VARIOS');
 
+  // Scanner States
+  const [isScanning, setIsScanning] = useState(false);
+  const [scannedCode, setScannedCode] = useState('');
+  const [suitcaseName, setSuitcaseName] = useState('');
+  const [flightLeg, setFlightLeg] = useState('');
+  const [luggagePhotoFile, setLuggagePhotoFile] = useState(null);
+  const [luggagePhotoPreview, setLuggagePhotoPreview] = useState(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isTagDetailsModalOpen, setIsTagDetailsModalOpen] = useState(false);
+
+  // View Card State
+  const [selectedTag, setSelectedTag] = useState(null);
+
   useEffect(() => {
     if (trip?.id) {
       const unsubscribe = subscribeToPacking(trip.id);
       return () => unsubscribe && unsubscribe();
     }
   }, [trip?.id, subscribeToPacking]);
+
+  useEffect(() => {
+    let html5QrCode;
+    if (isScanning) {
+      html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          setScannedCode(decodedText);
+          html5QrCode.stop().then(() => {
+            setIsScanning(false);
+            setIsTagDetailsModalOpen(true);
+            setSuitcaseName('Maleta Principal');
+            setFlightLeg('');
+          });
+        },
+        () => {} // Ignorar errores de frame
+      ).catch(err => {
+        console.error("Error al iniciar cámara", err);
+        alert("No se pudo iniciar la cámara. Revisa los permisos.");
+        setIsScanning(false);
+      });
+    }
+
+    return () => {
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch(console.error);
+      }
+    };
+  }, [isScanning]);
 
   const toggleCategory = (category) => {
     setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }));
@@ -59,6 +104,47 @@ export default function PackingPage() {
     await addItem(trip.id, { name: newItemName.trim(), category: newItemCategory.trim().toUpperCase() });
     setNewItemName('');
     setIsAdding(false);
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setLuggagePhotoFile(file);
+      setLuggagePhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSaveScannedTag = async (e) => {
+    e.preventDefault();
+    setIsUploadingPhoto(true);
+    try {
+      const tagName = flightLeg.trim() 
+        ? `Etiqueta: ${scannedCode} (${flightLeg})`
+        : `Etiqueta: ${scannedCode}`;
+        
+      let photoUrl = null;
+      if (luggagePhotoFile) {
+        photoUrl = await usePackingStore.getState().uploadLuggagePhoto(trip.id, luggagePhotoFile);
+      }
+        
+      await addItem(trip.id, { 
+        name: tagName, 
+        category: 'ETIQUETAS FACTURACIÓN',
+        suitcaseName: suitcaseName.trim() || 'Maleta',
+        flightLeg: flightLeg.trim(),
+        scannedCode: scannedCode,
+        photoUrl: photoUrl
+      });
+      
+      setIsTagDetailsModalOpen(false);
+      setScannedCode('');
+      setLuggagePhotoFile(null);
+      setLuggagePhotoPreview(null);
+    } catch (err) {
+      alert("Error al guardar la etiqueta.");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
   if (isLoading && totalItems === 0) {
@@ -118,14 +204,23 @@ export default function PackingPage() {
         </div>
       </div>
 
-      {/* Botón Principal para Añadir (reemplaza al flotante oculto) */}
-      <button 
-        onClick={() => { setNewItemCategory(''); setNewItemName(''); setIsAdding(true); }}
-        className="w-full bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
-      >
-        <Plus size={20} strokeWidth={3} />
-        Añadir Nueva Categoría o Ítem
-      </button>
+      {/* Botones de Acción Principales */}
+      <div className="flex gap-3">
+        <button 
+          onClick={() => { setNewItemCategory(''); setNewItemName(''); setIsAdding(true); }}
+          className="flex-1 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
+        >
+          <Plus size={20} strokeWidth={3} />
+          Nueva Categoría
+        </button>
+        <button 
+          onClick={() => setIsScanning(true)}
+          className="flex-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
+        >
+          <ScanBarcode size={20} strokeWidth={3} />
+          Escanear Etiqueta
+        </button>
+      </div>
 
       {/* Lista por Categorías */}
       <div className="space-y-3">
@@ -180,23 +275,49 @@ export default function PackingPage() {
                     {catItems.map(item => (
                       <div 
                         key={item.id} 
-                        onClick={() => toggleItem(trip.id, item.id, item.packed)}
+                        onClick={() => {
+                          if (item.category === 'ETIQUETAS FACTURACIÓN' || item.scannedCode) {
+                            setSelectedTag(item);
+                          } else {
+                            toggleItem(trip.id, item.id, item.packed);
+                          }
+                        }}
                         className="flex items-center justify-between py-2.5 px-3 hover:bg-slate-800/30 transition-colors group cursor-pointer"
                       >
                         <div className="flex items-center gap-3 flex-1">
-                          <div className={`w-6 h-6 rounded flex items-center justify-center transition-colors border ${item.packed ? 'bg-teal-500 border-teal-500' : 'bg-slate-950 border-slate-700'}`}>
+                          <div 
+                            onClick={(e) => {
+                              if (item.category === 'ETIQUETAS FACTURACIÓN' || item.scannedCode) {
+                                e.stopPropagation();
+                                toggleItem(trip.id, item.id, item.packed);
+                              }
+                            }}
+                            className={`w-6 h-6 rounded flex items-center justify-center transition-colors border ${item.packed ? 'bg-teal-500 border-teal-500' : 'bg-slate-950 border-slate-700'}`}
+                          >
                             {item.packed && <Check className="w-4 h-4 text-slate-900" strokeWidth={3} />}
                           </div>
-                          <span className={`text-base font-medium transition-colors ${item.packed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                          <span className={`text-base font-medium transition-colors flex-1 ${item.packed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
                             {item.name}
+                            {item.suitcaseName && (
+                              <span className="block text-xs text-indigo-400 mt-0.5 no-underline">
+                                🧳 {item.suitcaseName}
+                              </span>
+                            )}
                           </span>
                         </div>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); deleteItem(trip.id, item.id); }}
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 text-slate-500 hover:text-red-400 transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        <div className="flex items-center">
+                          {(item.category === 'ETIQUETAS FACTURACIÓN' || item.scannedCode) && (
+                            <div className="opacity-100 p-2 text-indigo-400 transition-all mr-1">
+                              <Eye size={18} />
+                            </div>
+                          )}
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); deleteItem(trip.id, item.id); }}
+                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 text-slate-500 hover:text-red-400 transition-all"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                     {/* Botón rápido final de lista */}
@@ -266,6 +387,172 @@ export default function PackingPage() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Modal de Escáner */}
+        {isScanning && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 p-4 backdrop-blur-md">
+            <div className="w-full max-w-md bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col">
+              <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h3 className="font-bold text-white flex items-center gap-2">
+                  <ScanBarcode className="text-indigo-400" /> Escanea tu Etiqueta
+                </h3>
+                <button onClick={() => setIsScanning(false)} className="p-2 text-slate-400 hover:text-white rounded-full">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="bg-black relative">
+                <div id="reader" className="w-full min-h-[300px]"></div>
+              </div>
+              <div className="p-4 text-center text-sm text-slate-400 bg-slate-900">
+                Apunta con la cámara al código de barras de la maleta.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Detalles de Etiqueta (Post-Scan) */}
+        {isTagDetailsModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-900 rounded-3xl p-6 w-full max-w-sm border border-indigo-500/30 shadow-[0_0_40px_rgba(99,102,241,0.15)]"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-indigo-500/20 text-indigo-400 rounded-2xl">
+                  <ScanBarcode size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">¡Etiqueta Leída!</h3>
+                  <p className="text-indigo-400 font-mono text-sm">{scannedCode}</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveScannedTag} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">¿De qué maleta es?</label>
+                  <input 
+                    type="text" 
+                    value={suitcaseName}
+                    onChange={e => setSuitcaseName(e.target.value)}
+                    placeholder="Ej. Maleta Grande Roja"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tramo / Vuelo (Opcional)</label>
+                  <input 
+                    type="text" 
+                    value={flightLeg}
+                    onChange={e => setFlightLeg(e.target.value)}
+                    placeholder="Ej. BCN - DBX (EK142)"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Foto de la maleta (Opcional)</label>
+                  {!luggagePhotoPreview ? (
+                    <label className="w-full bg-slate-950/50 border border-dashed border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                      <Camera className="text-slate-500" size={24} />
+                      <span className="text-sm font-medium text-slate-400">Tocar para echar foto</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        capture="environment"
+                        onChange={handlePhotoChange}
+                        className="hidden"
+                      />
+                    </label>
+                  ) : (
+                    <div className="relative w-full h-32 rounded-xl overflow-hidden border border-indigo-500/30">
+                      <img src={luggagePhotoPreview} alt="Preview" className="w-full h-full object-cover" />
+                      <button 
+                        type="button"
+                        onClick={() => { setLuggagePhotoFile(null); setLuggagePhotoPreview(null); }}
+                        className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full backdrop-blur-md"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button" 
+                    onClick={() => { setIsTagDetailsModalOpen(false); setScannedCode(''); setLuggagePhotoFile(null); setLuggagePhotoPreview(null); }}
+                    className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors"
+                    disabled={isUploadingPhoto}
+                  >
+                    Descartar
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isUploadingPhoto}
+                    className="flex-1 px-4 py-3 bg-indigo-500 hover:bg-indigo-400 text-slate-900 rounded-xl font-bold transition-colors disabled:opacity-50"
+                  >
+                    {isUploadingPhoto ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Claim Card Modal */}
+        {selectedTag && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4" onClick={() => setSelectedTag(null)}>
+            <motion.div 
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-[2rem] w-full max-w-sm overflow-hidden shadow-2xl relative"
+            >
+              {selectedTag.photoUrl ? (
+                <div className="w-full h-64 bg-slate-200">
+                  <img src={selectedTag.photoUrl} alt="Maleta" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-full h-32 bg-slate-100 flex flex-col items-center justify-center text-slate-400">
+                  <Luggage size={48} className="opacity-20 mb-2" />
+                  <span className="text-sm font-medium">Sin foto adjunta</span>
+                </div>
+              )}
+              
+              <button 
+                onClick={() => setSelectedTag(null)}
+                className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="p-8 text-center bg-white relative">
+                <div className="absolute top-0 left-0 w-full h-4 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#f87171_10px,#f87171_20px)] opacity-20 -mt-4"></div>
+                
+                <h2 className="text-2xl font-black text-slate-900 mb-1 tracking-tight">
+                  {selectedTag.scannedCode || selectedTag.name.split('Etiqueta: ')[1]?.split(' (')[0] || 'SIN CÓDIGO'}
+                </h2>
+                <div className="w-full max-w-[200px] mx-auto h-16 opacity-80 mb-6 bg-[repeating-linear-gradient(90deg,#0f172a_0px,#0f172a_2px,transparent_2px,transparent_4px,#0f172a_4px,#0f172a_8px,transparent_8px,transparent_10px)]"></div>
+                
+                <div className="space-y-4 text-left">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Identificación Maleta</p>
+                    <p className="font-medium text-slate-900">{selectedTag.suitcaseName || 'Equipaje Facturado'}</p>
+                  </div>
+                  
+                  {selectedTag.flightLeg && (
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Trayecto / Vuelo</p>
+                      <p className="font-medium text-slate-900">{selectedTag.flightLeg}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </motion.div>
           </div>
         )}
