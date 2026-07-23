@@ -20,7 +20,14 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
     agencyContact: '',
     insuranceName: '',
     insurancePolicy: '',
-    insurancePhone: ''
+    insurancePhone: '',
+    // Finances
+    budget: '',
+    currency: 'EUR',
+    exchangeRate: '',
+    isGroupMode: false,
+    splitMembers: '',
+    categories: ''
   });
 
   useEffect(() => {
@@ -36,7 +43,13 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
         agencyContact: trip.agencyContact || '',
         insuranceName: trip.insuranceName || '',
         insurancePolicy: trip.insurancePolicy || '',
-        insurancePhone: trip.insurancePhone || ''
+        insurancePhone: trip.insurancePhone || '',
+        budget: trip.budget || '',
+        currency: trip.currency || 'EUR',
+        exchangeRate: trip.exchangeRate || '',
+        isGroupMode: trip.isGroupMode || false,
+        splitMembers: trip.splitMembers ? trip.splitMembers.join(', ') : '',
+        categories: trip.categories ? trip.categories.join(', ') : 'Comida, Transporte, Ocio, Alojamiento, Vuelos, Gasolina, Supermercado, Otros'
       });
     }
   }, [isOpen, trip]);
@@ -57,7 +70,13 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
         agencyContact: formData.agencyContact,
         insuranceName: formData.insuranceName,
         insurancePolicy: formData.insurancePolicy,
-        insurancePhone: formData.insurancePhone
+        insurancePhone: formData.insurancePhone,
+        budget: formData.budget ? parseFloat(formData.budget) : 0,
+        currency: formData.currency,
+        exchangeRate: formData.exchangeRate ? parseFloat(formData.exchangeRate) : null,
+        isGroupMode: formData.isGroupMode,
+        splitMembers: formData.splitMembers.split(',').map(s => s.trim()).filter(Boolean),
+        categories: formData.categories.split(',').map(s => s.trim()).filter(Boolean)
       };
 
       if (formData.startDate) {
@@ -179,6 +198,65 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-400 mb-1">Teléfono Asistencia 24h</label>
                   <input type="tel" value={formData.insurancePhone} onChange={e => setFormData({...formData, insurancePhone: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-emerald-500" placeholder="+34..." />
+                </div>
+              </div>
+            </section>
+
+            {/* 4. Finanzas y Reparto */}
+            <section className="bg-indigo-900/10 p-5 rounded-2xl border border-indigo-500/20 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                  <span className="text-lg">💰</span> Finanzas y Presupuesto
+                </h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Presupuesto Estimado</label>
+                  <input type="number" min="0" step="0.01" value={formData.budget} onChange={e => setFormData({...formData, budget: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="Ej. 1500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Moneda Principal</label>
+                  <input type="text" value={formData.currency} onChange={e => setFormData({...formData, currency: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500 uppercase" placeholder="EUR, USD, GBP..." maxLength={3} />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Factor de Conversión (Moneda Local)</label>
+                  <input type="number" min="0" step="0.0001" value={formData.exchangeRate} onChange={e => setFormData({...formData, exchangeRate: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="Ej. 160 (Si 1€ = 160 Yenes)" />
+                  <p className="text-[10px] text-slate-500 mt-1">Si viajas a un país con otra moneda, pon a cuánto equivale 1 unidad de tu moneda principal. Dejar en blanco si no aplica.</p>
+                </div>
+                
+                <div className="md:col-span-2 pt-2 border-t border-indigo-500/20">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={formData.isGroupMode} 
+                        onChange={e => setFormData({...formData, isGroupMode: e.target.checked})}
+                        className="sr-only" 
+                      />
+                      <div className={`block w-12 h-6 rounded-full transition-colors ${formData.isGroupMode ? 'bg-indigo-500' : 'bg-slate-700'}`}></div>
+                      <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${formData.isGroupMode ? 'transform translate-x-6' : ''}`}></div>
+                    </div>
+                    <div>
+                      <span className="block text-sm font-bold text-white">Activar Modo Cuentas Claras (Grupos)</span>
+                      <span className="block text-xs text-slate-400">Permite registrar quién paga qué y calcular deudas.</span>
+                    </div>
+                  </label>
+                </div>
+
+                {formData.isGroupMode && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Participantes del Gasto</label>
+                    <input type="text" value={formData.splitMembers} onChange={e => setFormData({...formData, splitMembers: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="Ej. Juan, María, Paco" />
+                    <p className="text-[10px] text-slate-500 mt-1">Nombres separados por comas. Útil para hacer caja al final del viaje.</p>
+                  </div>
+                )}
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Categorías de Gasto</label>
+                  <input type="text" value={formData.categories} onChange={e => setFormData({...formData, categories: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="Comida, Taxis, Entradas..." />
+                  <p className="text-[10px] text-slate-500 mt-1">Categorías separadas por comas. Podrás elegir entre ellas al añadir un gasto.</p>
                 </div>
               </div>
             </section>

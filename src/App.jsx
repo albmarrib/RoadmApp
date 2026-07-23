@@ -14,6 +14,7 @@ import ItineraryPage from './features/itinerary/pages/ItineraryPage';
 import MapPage from './features/map/pages/MapPage';
 import DocumentsPage from './features/documents/pages/DocumentsPage';
 import PackingPage from './features/packing/pages/PackingPage';
+import ExpensesPage from './features/finances/pages/ExpensesPage';
 
 export default function App() {
   const { initialize } = useAuthStore();
@@ -44,7 +45,7 @@ export default function App() {
             <Route path="map" element={<MapPage />} />
             <Route path="documents" element={<DocumentsPage />} />
             <Route path="packing" element={<PackingPage />} />
-            {/* Próximas fases: expenses */}
+            <Route path="expenses" element={<ExpensesPage />} />
           </Route>
         </Route>
 
