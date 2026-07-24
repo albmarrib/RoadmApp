@@ -1,6 +1,7 @@
 import { X, ExternalLink, DownloadCloud, FileWarning } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 export default function DocumentViewer({ url, name, isOpen, onClose }) {
   if (!isOpen || !url) return null;
@@ -56,23 +57,23 @@ export default function DocumentViewer({ url, name, isOpen, onClose }) {
       >
         <div className="bg-slate-900 rounded-2xl w-full max-w-6xl h-full md:h-[90vh] flex flex-col shadow-2xl border border-slate-800 relative">
           <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/50 rounded-t-2xl">
-            <h3 className="text-white font-bold truncate pr-4">{name}</h3>
+            <h3 className="text-white font-bold truncate pr-2 max-w-[50%]">{name}</h3>
             <div className="flex items-center gap-2">
               <a 
                 href={isOffline ? safeUrl : url} 
                 target="_blank" 
                 rel="noreferrer"
                 download={isOffline || isEmail ? name : undefined}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors text-sm font-semibold ${isOffline ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-colors text-sm font-bold shadow-lg ${isOffline ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-teal-500 hover:bg-teal-400 text-slate-900'}`}
               >
                 {isOffline || isEmail ? <DownloadCloud size={16} /> : <ExternalLink size={16} />}
-                <span className="hidden sm:inline">{isOffline || isEmail ? 'Descargar Archivo' : 'Abrir original'}</span>
+                <span>{isOffline || isEmail ? 'Descargar' : 'Pantalla Completa'}</span>
               </a>
               <button 
                 onClick={onClose}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
+                className="p-2 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 rounded-xl transition-colors"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
           </div>
@@ -88,17 +89,35 @@ export default function DocumentViewer({ url, name, isOpen, onClose }) {
                 </a>
               </div>
             ) : isPdf ? (
-              <iframe 
-                src={`${safeUrl}${safeUrl.startsWith('blob:') ? '' : '#toolbar=0&navpanes=0&scrollbar=0'}`} 
-                className="w-full h-full max-w-5xl rounded-xl bg-white shadow-2xl" 
-                title={name} 
-              />
+              <div className="w-full h-full flex flex-col max-w-5xl bg-slate-800 rounded-xl overflow-hidden shadow-2xl relative">
+                <div className="bg-slate-700/60 p-2 text-center text-xs text-slate-300 md:hidden flex-shrink-0">
+                  Desliza para leer. Para hacer zoom, pulsa <strong>Pantalla Completa</strong> arriba.
+                </div>
+                <iframe 
+                  src={`${safeUrl}${safeUrl.startsWith('blob:') ? '' : '#toolbar=0&navpanes=0&scrollbar=0'}`} 
+                  className="w-full flex-1 bg-white" 
+                  title={name} 
+                />
+              </div>
             ) : (
-              <img 
-                src={safeUrl} 
-                alt={name} 
-                className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" 
-              />
+              <TransformWrapper initialScale={1} minScale={0.5} maxScale={8} centerOnInit={true}>
+                {({ zoomIn, zoomOut, resetTransform }) => (
+                  <div className="w-full h-full flex flex-col items-center justify-center relative">
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-slate-700/50 z-50 shadow-xl">
+                      <button onClick={() => zoomOut()} className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-xl transition-colors font-bold text-xl">-</button>
+                      <button onClick={() => resetTransform()} className="p-2 px-4 text-sm text-slate-300 hover:text-white hover:bg-slate-700 rounded-xl transition-colors font-semibold">Reset</button>
+                      <button onClick={() => zoomIn()} className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-xl transition-colors font-bold text-xl">+</button>
+                    </div>
+                    <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }} contentStyle={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <img 
+                        src={safeUrl} 
+                        alt={name} 
+                        className="max-w-full max-h-full object-contain rounded-xl shadow-2xl pointer-events-auto" 
+                      />
+                    </TransformComponent>
+                  </div>
+                )}
+              </TransformWrapper>
             )}
           </div>
         </div>

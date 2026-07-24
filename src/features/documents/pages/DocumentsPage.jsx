@@ -112,14 +112,18 @@ export default function DocumentsPage() {
 
                     const newNotes = `${duplicateNode.notes || ''}\n\n[Fusionado - Doc: ${doc.title}]\nMoneda Original: ${ev.cost} ${extractedCurrency}\n\n${ev.details || ''}`.trim();
                     
-                    // Solo sumar el coste si es diferente de 0 y no es exactamente el mismo que ya teníamos (para no duplicar el mismo recibo)
+                    const existingAttachments = duplicateNode.attachments || [];
+                    const isNewDocument = !existingAttachments.some(att => att.url === doc.url);
+                    
                     let newCost = duplicateNode.cost || 0;
-                    if (finalCost > 0 && finalCost !== duplicateNode.cost) {
+                    if (finalCost > 0 && isNewDocument) {
                       newCost += finalCost;
                     }
                     
-                    const existingAttachments = duplicateNode.attachments || [];
-                    const newAttachments = [...existingAttachments, { name: doc.title, url: doc.url }];
+                    const newAttachments = [...existingAttachments];
+                    if (isNewDocument) {
+                      newAttachments.push({ name: doc.title, url: doc.url });
+                    }
                     const newTags = [...(duplicateNode.tags || []), 'REVISAR PRECIO'];
                     
                     const updateData = { notes: newNotes, cost: newCost, attachments: newAttachments, tags: newTags };
@@ -264,12 +268,12 @@ export default function DocumentsPage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white mb-1">Documentos</h2>
           <p className="text-slate-400 text-sm">Gestiona tus reservas y documentos personales.</p>
         </div>
-        <label className="bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 border border-teal-500/30 font-bold py-2 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg cursor-pointer">
+        <label className="bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 border border-teal-500/30 font-bold py-2 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg cursor-pointer shrink-0">
           <UploadCloud className="w-4 h-4" />
           <span>{isUploading ? 'Subiendo...' : 'Subir Documento'}</span>
           <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
@@ -321,30 +325,30 @@ export default function DocumentsPage() {
       {isLoading && documents.length === 0 ? (
         <div className="text-slate-400 text-center py-10 animate-pulse">Cargando documentos...</div>
       ) : filteredDocs.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
           {filteredDocs.map((doc) => (
             <div 
               key={doc.id}
               onClick={() => { setViewerUrl(doc.url); setViewerName(doc.title); }}
-              className="bg-slate-900 border border-slate-700 hover:border-teal-500/50 rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-colors group shadow-lg"
+              className="bg-slate-900 border border-slate-700 hover:border-teal-500/50 rounded-2xl p-3 sm:p-4 flex flex-col justify-between cursor-pointer transition-colors group shadow-lg"
             >
-              <div className="flex items-start gap-3">
-                <div className="p-3 bg-slate-800 rounded-xl text-teal-400 group-hover:bg-teal-500/20 transition-colors">
+              <div className="flex flex-col items-center text-center gap-2">
+                <div className="p-3 bg-slate-800 rounded-xl text-teal-400 group-hover:bg-teal-500/20 transition-colors shrink-0">
                   <FileText className="w-6 h-6" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-white truncate" title={doc.title}>{doc.title}</h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {doc.createdAt?.toDate ? format(doc.createdAt.toDate(), 'dd MMM yyyy, HH:mm') : 'Reciente'}
+                <div className="w-full min-w-0 flex flex-col items-center">
+                  <h3 className="font-semibold text-sm text-white truncate w-full" title={doc.title}>{doc.title}</h3>
+                  <p className="text-[10px] sm:text-xs text-slate-500 mt-1">
+                    {doc.createdAt?.toDate ? format(doc.createdAt.toDate(), 'dd MMM yyyy') : 'Reciente'}
                   </p>
                   {doc.aiAnalyzed && (
-                    <span className="inline-block mt-2 text-[10px] font-bold bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/30">
-                      ✓ Procesado por IA
+                    <span className="inline-block mt-2 text-[9px] sm:text-[10px] font-bold bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/30">
+                      ✓ IA
                     </span>
                   )}
                 </div>
               </div>
-              <div className="flex justify-end items-center mt-4 pt-4 border-t border-slate-800/50">
+              <div className="flex justify-center items-center mt-3 pt-3 border-t border-slate-800/50">
                 <button
                   onClick={(e) => handleDelete(doc.id, e)}
                   className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"

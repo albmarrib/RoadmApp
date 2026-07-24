@@ -69,8 +69,15 @@ exports.analyzeDocument = onCall(
         IMPORTANTE (Vuelos con escala): Si es un vuelo con escalas, el evento principal debe abarcar desde el ORIGEN INICIAL hasta el DESTINO FINAL.
         IMPORTANTE (Costes múltiples): Si un documento tiene varios eventos (ej: Coche de alquiler + Ferry), extrae eventos separados pero asegúrate de que el 'cost' de cada uno sea SOLO su subtotal individual. NUNCA pongas el precio Total del documento en todos los eventos para no duplicar el gasto.
         IMPORTANTE (Alquiler de Coche): Usa SIEMPRE el tipo "car_rental", NUNCA "drive". Genera UN SOLO evento para todo el periodo de alquiler. Extrae la fecha de recogida en 'startTime' y la de devolución en 'endTime'. Para la ubicación de recogida usa el objeto 'location'. SI y SOLO SI la ubicación de devolución es distinta a la de recogida, crea también el objeto 'dropoffLocation' con las coordenadas de la devolución.
+        IMPORTANTE (Vuelos): Si el documento incluye un billete de vuelo de IDA y VUELTA, es OBLIGATORIO que devuelvas un ARRAY CON 2 OBJETOS. El primer objeto para el vuelo de Ida (con el coste total). El segundo objeto para el vuelo de Vuelta (con coste 0). NUNCA intentes meter la vuelta dentro de la ida.
         
-        Estructura obligatoria del JSON:
+        EJEMPLO PARA VUELOS DE IDA Y VUELTA:
+        [
+          { "type": "flight", "title": "Vuelo Ida: Madrid - Tokio", "startTime": "...", "endTime": "...", "cost": 1200, "location": {"name": "Madrid"} },
+          { "type": "flight", "title": "Vuelo Vuelta: Tokio - Madrid", "startTime": "...", "endTime": "...", "cost": 0, "location": {"name": "Tokio"} }
+        ]
+
+        Estructura obligatoria del JSON para cada evento:
         {
           "type": "flight" | "accommodation" | "activity" | "drive" | "car_rental",
           "title": "Nombre claro (Ej: Vuelo QR149 Madrid-Tokio o Wellington Hotel)",

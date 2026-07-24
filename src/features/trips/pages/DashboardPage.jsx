@@ -33,10 +33,10 @@ export default function DashboardPage() {
           <p className="text-slate-400">¿A dónde vamos hoy?</p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto mt-4 md:mt-0">
           <button 
             onClick={() => setIsJoinModalOpen(true)}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 px-5 rounded-xl border border-slate-700 hover:border-slate-600 transition-all flex items-center justify-center gap-2 whitespace-nowrap shadow-lg"
+            className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 px-5 rounded-xl border border-slate-700 hover:border-slate-600 transition-all flex items-center justify-center gap-2 whitespace-nowrap shadow-lg w-full sm:w-auto"
           >
             <Users className="w-5 h-5 text-indigo-400" />
             <span>Unirse a viaje</span>
@@ -44,7 +44,7 @@ export default function DashboardPage() {
           
           <button 
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-teal-500/25 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+            className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-teal-500/25 transition-all flex items-center justify-center gap-2 whitespace-nowrap w-full sm:w-auto"
           >
             <Plus className="w-5 h-5" />
             <span>Nuevo Viaje</span>

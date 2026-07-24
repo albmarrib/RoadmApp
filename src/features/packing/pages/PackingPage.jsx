@@ -218,7 +218,7 @@ export default function PackingPage() {
           className="flex-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
         >
           <ScanBarcode size={20} strokeWidth={3} />
-          Escanear Etiqueta
+          Escanear Etiqueta de Maletas
         </button>
       </div>
 

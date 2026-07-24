@@ -51,7 +51,7 @@ export default function ItineraryPage() {
         startTime: node.endTime,
         location: node.dropoffLocation || node.location,
         isDropoff: true,
-        cost: 0 // Para no sumar precios visualmente en resumenes del día si los hubiera
+        cost: 0 
       };
       expandedNodes.push(clone);
     }
@@ -65,14 +65,17 @@ export default function ItineraryPage() {
 
   // Agrupar nodos filtrados por día para la vista de lista
   const groupedNodes = filteredNodes.reduce((acc, node) => {
-    if (!node.startTime) return acc;
-    const dateStr = format(node.startTime.toDate(), 'yyyy-MM-dd');
+    const dateStr = node.startTime ? format(node.startTime.toDate(), 'yyyy-MM-dd') : 'Sin Fecha';
     if (!acc[dateStr]) acc[dateStr] = [];
     acc[dateStr].push(node);
     return acc;
   }, {});
 
-  const sortedDates = Object.keys(groupedNodes).sort();
+  const sortedDates = Object.keys(groupedNodes).sort((a, b) => {
+    if (a === 'Sin Fecha') return -1; // Sin Fecha al principio
+    if (b === 'Sin Fecha') return 1;
+    return a.localeCompare(b);
+  });
 
   return (
     <div className="max-w-3xl mx-auto pb-20">
@@ -111,28 +114,25 @@ export default function ItineraryPage() {
         </div>
 
         {/* Filtros */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-500 mr-1" />
-          {[
-            { id: 'all', label: 'Todos' },
-            { id: 'flight', label: 'Vuelos' },
-            { id: 'accommodation', label: 'Hoteles' },
-            { id: 'activity', label: 'Actividades' },
-            { id: 'drive', label: 'Rutas' },
-            { id: 'car_rental', label: 'Alquiler' }
-          ].map(f => (
-            <button
-              key={f.id}
-              onClick={() => setActiveFilter(f.id)}
-              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-                activeFilter === f.id 
-                  ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' 
-                  : 'bg-slate-900 text-slate-400 border border-slate-700 hover:bg-slate-800'
-              }`}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Filter className="w-4 h-4 text-slate-500 hidden sm:block" />
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={activeFilter}
+              onChange={(e) => setActiveFilter(e.target.value)}
+              className="w-full sm:w-auto appearance-none bg-slate-900 border border-slate-700 text-slate-300 text-sm font-medium rounded-xl px-4 py-2 pr-8 hover:border-teal-500/50 focus:outline-none focus:border-teal-500 transition-colors"
             >
-              {f.label}
-            </button>
-          ))}
+              <option value="all">Todos los eventos</option>
+              <option value="flight">Vuelos</option>
+              <option value="accommodation">Hoteles</option>
+              <option value="activity">Actividades</option>
+              <option value="drive">Rutas</option>
+              <option value="car_rental">Coches de Alquiler</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -154,13 +154,15 @@ export default function ItineraryPage() {
                 onNodeClick={openEditModal} 
               />
             ) : (
-              <div className="space-y-10">
+              <div className="space-y-4">
                 {sortedDates.length > 0 ? sortedDates.map((dateStr) => (
-                  <div key={dateStr}>
-                    <h3 className="text-lg font-bold text-teal-400 mb-6 bg-slate-900 sticky top-20 z-10 py-2 border-b border-slate-800">
-                      {format(new Date(dateStr), "EEEE, d 'de' MMMM", { locale: es })}
-                    </h3>
-                    <div className="ml-2">
+                  <div key={dateStr} className="pb-2">
+                    <div className="flex justify-center sticky top-20 z-10 py-2 bg-slate-950/90 backdrop-blur-md -mx-4 px-4 mb-1">
+                      <span className="text-[10px] sm:text-xs font-bold text-teal-400 uppercase tracking-widest bg-teal-500/10 border border-teal-500/30 shadow-lg px-4 py-1.5 rounded-full">
+                        {dateStr === 'Sin Fecha' ? 'Sin Fecha' : format(new Date(dateStr), "EEEE, d 'de' MMMM", { locale: es })}
+                      </span>
+                    </div>
+                    <div>
                       {groupedNodes[dateStr].map((node, index) => (
                         <TimelineNode 
                           key={node.id} 

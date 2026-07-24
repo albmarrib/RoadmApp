@@ -154,7 +154,7 @@ export default function MapPage() {
 
   return (
     <div className="h-[calc(100vh-12rem)] min-h-[500px] w-full rounded-3xl overflow-hidden border border-slate-700 shadow-2xl relative">
-      <div className="absolute top-4 left-4 right-4 z-[400] flex flex-wrap gap-2 pointer-events-none">
+      <div className="absolute top-4 left-4 right-4 z-[390] flex flex-wrap gap-2 pointer-events-none">
         <div className="pointer-events-auto flex gap-2 overflow-x-auto hide-scrollbar w-full p-1">
           <div className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700 mr-2 shadow-lg shrink-0">
             <h2 className="text-sm font-bold text-teal-400">Ver en mapa:</h2>

@@ -11,8 +11,8 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
-    type: 'activity',
     title: '',
+    type: 'flight',
     startDate: '',
     startTime: '',
     endDate: '',
@@ -52,13 +52,11 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
       const st = editingNode.startTime?.toDate();
       const et = editingNode.endTime?.toDate();
       setFormData({
-        type: editingNode.type || 'activity',
-        title: editingNode.title || '',
+        ...editingNode,
         startDate: st ? format(st, 'yyyy-MM-dd') : '',
         startTime: st ? format(st, 'HH:mm') : '',
         endDate: et ? format(et, 'yyyy-MM-dd') : '',
         endTime: et ? format(et, 'HH:mm') : '',
-        cost: editingNode.cost || '',
         currency: editingNode.currency || 'EUR',
         notes: editingNode.notes || '',
         externalUrl: editingNode.externalUrl || '',
@@ -300,7 +298,7 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[999] flex items-center justify-center p-0 md:p-4 w-screen h-[100dvh] overflow-hidden">
         <motion.div 
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -311,7 +309,7 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto hide-scrollbar"
+          className="relative w-full h-full md:h-auto max-w-2xl bg-slate-900 md:border border-slate-700 rounded-none md:rounded-3xl shadow-2xl p-6 md:p-8 md:max-h-[90vh] overflow-y-auto overflow-x-hidden hide-scrollbar flex flex-col"
         >
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-white">{editingNode ? 'Editar Paso' : 'Añadir Nuevo Paso'}</h2>
@@ -373,18 +371,20 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
 
             {/* Fechas Fin (Hotel, Coche, Vuelos...) */}
             {(formData.type === 'accommodation' || formData.type === 'car_rental' || formData.type === 'flight') && (
-              <div className="grid grid-cols-2 gap-4 bg-slate-800/20 p-3 rounded-xl border border-slate-800">
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1">
-                    {formData.type === 'accommodation' ? 'Check-out' : formData.type === 'car_rental' ? 'Devolución (Día)' : 'Día Fin'}
-                  </label>
-                  <input type={formData.type === 'accommodation' ? "date" : "date"} required={formData.type === 'accommodation'} value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1">
-                    {formData.type === 'accommodation' ? 'Hora salida' : formData.type === 'car_rental' ? 'Devolución (Hora)' : 'Hora llegada'}
-                  </label>
-                  <input type="time" value={formData.endTime} onChange={e => setFormData({...formData, endTime: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 bg-slate-800/20 p-3 rounded-xl border border-slate-800">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">
+                      {formData.type === 'accommodation' ? 'Check-out' : formData.type === 'car_rental' ? 'Devolución (Día)' : 'Día Fin'}
+                    </label>
+                    <input type={formData.type === 'accommodation' ? "date" : "date"} required={formData.type === 'accommodation'} value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">
+                      {formData.type === 'accommodation' ? 'Hora salida' : formData.type === 'car_rental' ? 'Devolución (Hora)' : 'Hora llegada'}
+                    </label>
+                    <input type="time" value={formData.endTime} onChange={e => setFormData({...formData, endTime: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" />
+                  </div>
                 </div>
               </div>
             )}
@@ -628,14 +628,27 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
             </div>
 
             {/* Notas y Coste */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
                 <label className="block text-sm font-medium text-slate-400 mb-1">Notas extras</label>
-                <input type="text" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" placeholder="Localizador, check-in, etc." />
+                <textarea 
+                  rows="3" 
+                  value={formData.notes} 
+                  onChange={e => setFormData({...formData, notes: e.target.value})} 
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500 resize-y" 
+                  placeholder="Localizador, check-in, info relevante..." 
+                ></textarea>
               </div>
-              <div>
+              <div className="sm:w-1/3">
                 <label className="block text-sm font-medium text-slate-400 mb-1">Precio estimado</label>
-                <input type="number" step="0.01" value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" placeholder="0.00" />
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  value={formData.cost} 
+                  onChange={e => setFormData({...formData, cost: e.target.value})} 
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" 
+                  placeholder="0.00" 
+                />
               </div>
             </div>
 

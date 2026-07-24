@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Plane, Hotel, Car, MapPin, Paperclip, Clock, CarFront, ChevronDown, ChevronUp, Phone, MessageCircle, Mail, User, Route } from 'lucide-react';
+import { Plane, Hotel, Car, MapPin, Paperclip, Clock, CarFront, ChevronDown, ChevronUp, Phone, MessageCircle, Mail, User, Route, Edit3 } from 'lucide-react';
 import DocumentViewer from '../../../components/ui/DocumentViewer';
 
 const getIcon = (type) => {
@@ -34,37 +34,24 @@ export default function TimelineNode({ node, isLast, onClick }) {
   };
 
   const handleCardClick = () => {
-    if (!isExpanded) {
-      setIsExpanded(true);
-    } else {
-      onClick && onClick(node);
-    }
+    setIsExpanded(!isExpanded);
   };
 
   return (
-    <div className="flex gap-4 relative group">
-      {/* Línea vertical conectora */}
-      {!isLast && (
-        <div className="absolute top-10 bottom-[-1rem] left-[1.15rem] w-[2px] bg-slate-800 rounded-full"></div>
-      )}
-      
-      {/* Icono */}
-      <div className="flex flex-col items-center">
-        <div className={`w-10 h-10 rounded-full ${bg} border ${border} flex items-center justify-center z-10 shadow-lg`}>
-          <Icon className={`w-5 h-5 ${color}`} />
-        </div>
-      </div>
-      
+    <div className="w-full relative group mb-3">
       {/* Tarjeta de contenido */}
-      <div className="flex-1 pb-8">
+      <div className="w-full">
         <div 
           onClick={handleCardClick}
           className={`bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4 cursor-pointer hover:border-teal-500/50 hover:bg-slate-800/80 transition-all shadow-lg ${isExpanded ? 'border-teal-500/30' : ''}`}
         >
           {/* Vista Compacta (Siempre visible) */}
-          <div className="flex justify-between items-start gap-2">
-            <div className="flex-1">
-              <h4 className="text-base font-bold text-white mb-1.5 leading-tight pr-2">
+          <div className="flex justify-between items-start gap-3">
+            <div className={`w-10 h-10 rounded-xl shrink-0 ${bg} border ${border} flex items-center justify-center shadow-sm`}>
+              <Icon className={`w-5 h-5 ${color}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-base font-bold text-white mb-1.5 leading-tight truncate pr-2">
                 {node.title}
               </h4>
               <div className="flex items-center gap-3 text-slate-400 text-xs">
@@ -102,6 +89,14 @@ export default function TimelineNode({ node, isLast, onClick }) {
           {isExpanded && (
             <div className="mt-4 pt-4 border-t border-slate-800/80 space-y-4" onClick={(e) => e.stopPropagation()}>
               
+              <button 
+                onClick={(e) => { e.stopPropagation(); onClick && onClick(node); }}
+                className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-teal-400 font-semibold py-2.5 rounded-xl transition-colors border border-slate-700 hover:border-teal-500/50"
+              >
+                <Edit3 className="w-4 h-4" />
+                <span>Editar Evento</span>
+              </button>
+
               {/* Información de Rutas */}
               {node.type === 'drive' && node.routeOrigin && node.routeDestination && (
                 <div className="bg-indigo-900/20 border border-indigo-500/20 p-3 rounded-xl flex items-center gap-3">

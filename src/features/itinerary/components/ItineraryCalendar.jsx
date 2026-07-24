@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { format, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Plane, Hotel, CarFront, MapPin, Route, CalendarDays } from 'lucide-react';
+import { Plane, Hotel, CarFront, MapPin, Route, CalendarDays, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import TimelineNode from './TimelineNode';
 
@@ -40,10 +40,14 @@ export default function ItineraryCalendar({ nodes, trip, onNodeClick }) {
       if (nodeDates[nodeDates.length - 1] > end) end = nodeDates[nodeDates.length - 1];
     }
     
-    return { start, end };
+    // Extender a semanas completas (Lunes a Domingo)
+    const calendarStart = startOfWeek(start, { weekStartsOn: 1 });
+    const calendarEnd = endOfWeek(end, { weekStartsOn: 1 });
+    
+    return { start: calendarStart, end: calendarEnd, tripStart: start, tripEnd: end };
   };
 
-  const { start, end } = getTripInterval();
+  const { start, end, tripStart, tripEnd } = getTripInterval();
   const days = eachDayOfInterval({ start, end });
 
   // Agrupar nodos por día para el calendario
@@ -67,47 +71,46 @@ export default function ItineraryCalendar({ nodes, trip, onNodeClick }) {
           <h3 className="text-lg font-bold text-white">Días del Viaje</h3>
         </div>
 
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-2">
+          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => (
+            <div key={d} className="text-center text-[10px] font-bold text-slate-500 mb-1">{d}</div>
+          ))}
           {days.map((day, idx) => {
             const dateKey = format(day, 'yyyy-MM-dd');
             const dayNodes = nodesByDate[dateKey] || [];
             const isSelected = selectedDate && isSameDay(day, selectedDate);
             
+            // Comprobar si el día está dentro del viaje real o es relleno de semana
+            const isWithinTrip = isWithinInterval(day, { start: tripStart, end: tripEnd }) || dayNodes.length > 0;
+            
             return (
               <div 
                 key={idx}
-                onClick={() => setSelectedDate(day)}
+                onClick={() => isWithinTrip && setSelectedDate(day)}
                 className={`
-                  relative min-h-[70px] p-2 rounded-2xl cursor-pointer transition-all border flex flex-col
+                  relative min-h-[70px] p-2 rounded-2xl transition-all border flex flex-col
+                  ${isWithinTrip ? 'cursor-pointer' : 'opacity-30 cursor-not-allowed'}
                   ${isSelected ? 'bg-slate-800 border-teal-500 ring-1 ring-teal-500/50 shadow-md' : 'bg-slate-900/50 border-slate-700/50 hover:border-slate-500 hover:bg-slate-800/50'}
                 `}
               >
-                <div className="flex flex-col mb-1">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? 'text-teal-400' : 'text-slate-500'}`}>
-                    {format(day, 'EEEE', { locale: es })}
-                  </span>
+                <div className="flex flex-col mb-1 items-center">
                   <span className={`text-lg font-black leading-none ${isSelected ? 'text-white' : 'text-slate-300'}`}>
                     {format(day, 'd')}
                   </span>
-                  <span className="text-[10px] font-medium text-slate-400">
+                  <span className="text-[9px] font-medium text-slate-400 mt-1">
                     {format(day, 'MMM', { locale: es })}
                   </span>
                 </div>
                 
                 {/* Eventos del día (Puntos o iconos) */}
-                <div className="flex flex-wrap gap-1 mt-auto pt-2">
+                <div className="flex flex-wrap gap-1 mt-auto justify-center">
                   {dayNodes.map((node, i) => (
                     <div 
                       key={node.id} 
-                      className={`w-4 h-4 rounded-md flex items-center justify-center border ${getBgColor(node.type)}`}
+                      className={`w-3 h-3 rounded-full border ${getBgColor(node.type)}`}
                       title={node.title}
-                    >
-                      {getIcon(node.type)}
-                    </div>
+                    />
                   ))}
-                  {dayNodes.length === 0 && (
-                    <div className="w-full h-4 rounded-md border border-dashed border-slate-700/50"></div>
-                  )}
                 </div>
               </div>
             );
@@ -115,35 +118,54 @@ export default function ItineraryCalendar({ nodes, trip, onNodeClick }) {
         </div>
       </div>
 
-      {/* Lista de eventos del día seleccionado */}
-      <AnimatePresence mode="wait">
+      {/* Modal de eventos del día seleccionado */}
+      <AnimatePresence>
         {selectedDate && (
-          <motion.div 
-            key={selectedDate.toString()}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-slate-900/50 rounded-3xl p-6 border border-slate-700"
-          >
-            <h4 className="text-teal-400 font-bold mb-6 border-b border-slate-700 pb-2">
-              Eventos del {format(selectedDate, "d 'de' MMMM", { locale: es })}
-            </h4>
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+              onClick={() => setSelectedDate(null)}
+            ></motion.div>
             
-            {selectedNodes.length > 0 ? (
-              <div className="space-y-8 ml-2">
-                {selectedNodes.map((node, index) => (
-                  <TimelineNode 
-                    key={node.id} 
-                    node={node} 
-                    isLast={index === selectedNodes.length - 1}
-                    onClick={onNodeClick}
-                  />
-                ))}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl p-6 flex flex-col max-h-[85vh] overflow-hidden"
+            >
+              <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                <h4 className="text-xl font-bold text-white">
+                  {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
+                </h4>
+                <button 
+                  onClick={() => setSelectedDate(null)}
+                  className="p-2 bg-slate-800 text-slate-400 hover:text-white rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
               </div>
-            ) : (
-              <p className="text-slate-400 text-sm italic">Día libre. No hay eventos planificados.</p>
-            )}
-          </motion.div>
+              
+              <div className="overflow-y-auto hide-scrollbar flex-1 pr-1">
+                {selectedNodes.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedNodes.map((node, index) => (
+                      <TimelineNode 
+                        key={node.id} 
+                        node={node} 
+                        isLast={index === selectedNodes.length - 1}
+                        onClick={(n) => { setSelectedDate(null); onNodeClick(n); }}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 bg-slate-800/50 rounded-2xl border border-dashed border-slate-700">
+                    <p className="text-slate-400 font-medium">Día libre. No hay eventos planificados.</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
