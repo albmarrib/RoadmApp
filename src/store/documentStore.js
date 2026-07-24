@@ -26,7 +26,7 @@ export const useDocumentStore = create((set, get) => ({
     return unsubscribe;
   },
 
-  addDocument: async (tripId, title, fileToUpload) => {
+  addDocument: async (tripId, title, fileToUpload, type = 'personal') => {
     try {
       const storage = getStorage();
       const fileRef = ref(storage, `trips/${tripId}/documents/${Date.now()}_${fileToUpload.name}`);
@@ -38,11 +38,23 @@ export const useDocumentStore = create((set, get) => ({
         title: title || fileToUpload.name,
         fileName: fileToUpload.name,
         url: url,
+        type: type, // 'personal' | 'ticket'
         createdAt: new Date()
       });
       return true;
     } catch (err) {
       console.error("Error adding document:", err);
+      throw err;
+    }
+  },
+
+  updateDocument: async (tripId, documentId, updates) => {
+    try {
+      const docRef = doc(db, `trips/${tripId}/documents/${documentId}`);
+      await import('firebase/firestore').then(({ updateDoc }) => updateDoc(docRef, updates));
+      return true;
+    } catch (err) {
+      console.error("Error updating document:", err);
       throw err;
     }
   },
