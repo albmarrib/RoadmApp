@@ -46,7 +46,7 @@ export default function TripCard({ trip, userId, delay = 0 }) {
           {/* Settings Button (Top Left) */}
           <button 
             onClick={handleSettingsClick}
-            className="absolute top-4 left-4 bg-slate-900/50 hover:bg-slate-900/80 backdrop-blur-md p-2 rounded-full border border-slate-700/50 transition-colors opacity-0 group-hover:opacity-100"
+            className="absolute top-4 left-4 bg-slate-900/50 hover:bg-slate-900/80 backdrop-blur-md p-2 rounded-full border border-slate-700/50 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
             title="Configurar Viaje"
           >
             <Settings className="w-4 h-4 text-slate-300 hover:text-teal-400 transition-colors" />

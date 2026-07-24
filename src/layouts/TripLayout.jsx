@@ -161,7 +161,7 @@ export default function TripLayout() {
             </button>
           </div>
           
-          <div className="flex overflow-x-auto hide-scrollbar gap-6 mt-2">
+          <div className="hidden md:flex overflow-x-auto hide-scrollbar gap-6 mt-2">
             {tabs.map((tab) => {
               const isActive = location.pathname.includes(tab.path);
               return (
@@ -182,10 +182,33 @@ export default function TripLayout() {
       </header>
 
       {/* Contenido Dinámico de la Pestaña */}
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Aquí se inyecta ItineraryPage, MapPage, etc */}
+      <main className="max-w-5xl mx-auto px-4 py-8 mb-20 md:mb-0">
         <Outlet context={{ trip }} /> 
       </main>
+
+      {/* Bottom Navigation (Solo Móvil) */}
+      <nav 
+        className="md:hidden fixed bottom-0 left-0 w-full bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 z-[100]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex items-center justify-around h-16 px-2">
+          {tabs.map((tab) => {
+            const isActive = location.pathname.includes(tab.path);
+            return (
+              <Link
+                key={tab.id}
+                to={tab.path}
+                className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all ${
+                  isActive ? 'text-teal-400 scale-110' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <tab.icon className={`w-6 h-6 ${isActive ? 'fill-teal-500/20' : ''}`} />
+                <span className="text-[10px] font-bold">{tab.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
 
       <TripSettingsModal 
         trip={trip} 
