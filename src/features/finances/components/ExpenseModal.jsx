@@ -109,10 +109,10 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+      <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-0 sm:p-6 overflow-hidden">
         <motion.div 
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-md"
           onClick={onClose}
         ></motion.div>
         
@@ -120,7 +120,7 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-lg bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl p-6 md:p-8 max-h-[90vh] overflow-y-auto hide-scrollbar"
+          className="relative w-full h-full sm:h-auto max-w-lg bg-slate-900 border-0 sm:border border-slate-700 rounded-none sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 overflow-y-auto overflow-x-hidden hide-scrollbar flex flex-col pb-24"
         >
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-white">
@@ -135,8 +135,8 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
             
             {/* 1. Datos Básicos */}
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-1 sm:col-span-2">
                   <label className="block text-sm font-medium text-slate-400 mb-1">Concepto</label>
                   <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500 text-lg" placeholder="Ej. Cena en Roma" />
                 </div>
@@ -168,31 +168,33 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
                     </div>
                   </>
                 ) : (
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-sm font-medium text-slate-400 mb-1">Importe ({trip?.currency || 'EUR'})</label>
-                    <input required type="number" min="0" step="0.01" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white font-bold text-xl focus:outline-none focus:border-teal-500" placeholder="0.00" />
+                    <input required type="number" min="0" step="0.01" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full max-w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white font-bold text-xl focus:outline-none focus:border-teal-500 box-border" placeholder="0.00" />
                   </div>
                 )}
 
-                <div className={trip?.exchangeRate ? "col-span-2" : ""}>
+                <div className={`${trip?.exchangeRate ? "col-span-1 sm:col-span-2" : ""} min-w-0 overflow-hidden`}>
                   <label className="block text-sm font-medium text-slate-400 mb-1">Fecha</label>
-                  <div className="relative">
-                    <CalendarIcon className="absolute left-3 top-3.5 w-4 h-4 text-slate-500" />
-                    <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-teal-500" />
-                  </div>
+                  <input 
+                    type="date" 
+                    value={formData.date} 
+                    onChange={e => setFormData({...formData, date: e.target.value})} 
+                    className="w-full min-w-0 appearance-none bg-slate-950 border border-slate-700 rounded-xl px-2 sm:px-4 py-3 text-white focus:outline-none focus:border-teal-500 box-border" 
+                  />
                 </div>
 
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-2 min-w-0">
                   <label className="block text-sm font-medium text-slate-400 mb-2">Categoría</label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {defaultCategories.map(cat => (
                       <button 
                         key={cat}
                         type="button"
                         onClick={() => setFormData({...formData, category: cat})}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${formData.category === cat ? 'bg-teal-500/20 text-teal-400 border-teal-500/50' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}
+                        className={`w-full px-1 py-3 rounded-xl text-xs font-bold border transition-colors flex items-center justify-center shadow-sm ${formData.category === cat ? 'bg-teal-500/20 text-teal-400 border-teal-500/50 shadow-teal-500/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}
                       >
-                        {cat}
+                        <span className="truncate">{cat}</span>
                       </button>
                     ))}
                   </div>

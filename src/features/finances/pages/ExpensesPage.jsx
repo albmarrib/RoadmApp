@@ -268,44 +268,35 @@ export default function ExpensesPage() {
           {/* TAB 2: LISTA DE GASTOS */}
           {activeTab === 'list' && (
             <div className="space-y-4">
-              {unifiedExpenses.length === 0 ? (
-                <div className="text-center py-20 bg-slate-900/50 rounded-3xl border border-dashed border-slate-700">
+              {expenses.length === 0 ? (
+                <div className="text-center py-20 bg-slate-900/50 rounded-3xl border border-dashed border-slate-700 mx-1">
                   <Receipt className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400 mb-4">Aún no hay gastos registrados.</p>
+                  <p className="text-slate-400 mb-4">Aún no hay gastos manuales.<br/><span className="text-xs">Usa el botón + para añadir uno nuevo.</span></p>
                 </div>
               ) : (
-                unifiedExpenses.map(exp => (
+                expenses.map(exp => (
                   <div 
                     key={exp.id}
-                    onClick={() => !exp.isNode && setEditingExpense(exp) && setIsModalOpen(true)}
-                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
-                      exp.isNode 
-                        ? 'bg-slate-900/40 border-slate-800/50 cursor-default' 
-                        : 'bg-slate-900 border-slate-700 hover:border-slate-500 cursor-pointer shadow-sm hover:shadow-md'
-                    }`}
+                    onClick={() => { setEditingExpense(exp); setIsModalOpen(true); }}
+                    className="flex items-center justify-between p-4 mx-1 rounded-2xl border transition-all bg-slate-900 border-slate-700 hover:border-slate-500 cursor-pointer shadow-sm hover:shadow-md"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${exp.isNode ? 'bg-slate-800 text-slate-500' : 'bg-teal-900/30 text-teal-400'}`}>
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center bg-teal-900/30 text-teal-400">
                         {getIconForCategory(exp.category)}
                       </div>
-                      <div>
-                        <h4 className="text-white font-bold text-sm">{exp.title}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-slate-400 capitalize">{exp.category}</span>
-                          {exp.isNode && (
-                            <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded uppercase font-bold tracking-wider">
-                              Itinerario
-                            </span>
-                          )}
-                          {!exp.isNode && exp.paidBy && trip.isGroupMode && (
-                            <span className="text-[10px] bg-indigo-900/30 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-white font-bold text-sm truncate">{exp.title}</h4>
+                        <div className="flex items-center gap-2 mt-1 overflow-hidden">
+                          <span className="text-xs text-slate-400 capitalize whitespace-nowrap">{exp.category}</span>
+                          {exp.paidBy && trip.isGroupMode && (
+                            <span className="text-[10px] bg-indigo-900/30 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded truncate">
                               Pagó: {exp.paidBy}
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0 ml-3">
                       <span className="block text-white font-black text-lg">
                         {exp.amount.toFixed(2)}
                       </span>

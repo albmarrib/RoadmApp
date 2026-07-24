@@ -298,10 +298,10 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[999] flex items-center justify-center p-0 md:p-4 w-screen h-[100dvh] overflow-hidden">
+      <div className="fixed inset-0 z-[999] flex items-start md:items-center justify-center p-0 md:p-4 overflow-hidden">
         <motion.div 
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm"
           onClick={onClose}
         ></motion.div>
         

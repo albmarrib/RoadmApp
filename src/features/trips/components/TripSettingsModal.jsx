@@ -114,10 +114,10 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-0 md:p-6 w-screen h-[100dvh] overflow-hidden">
+      <div className="fixed inset-0 z-[1000] flex items-start md:items-center justify-center p-0 md:p-6 overflow-hidden">
         <motion.div 
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-md"
           onClick={onClose}
         ></motion.div>
         
