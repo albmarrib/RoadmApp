@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { useItineraryStore } from '../../../store/itineraryStore';
@@ -118,7 +118,7 @@ function NodePopupContent({ node, userPos, onEdit }) {
 export default function MapPage() {
   const { trip } = useOutletContext();
   const { nodes, subscribeToNodes } = useItineraryStore();
-  const [filters, setFilters] = useState({ accommodation: true, drive: true, activity: true });
+  const [filters, setFilters] = useState({ accommodation: true, drive: true, activity: true, car_rental: true });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
   
@@ -137,11 +137,14 @@ export default function MapPage() {
   const nodesWithLocation = nodes
     .filter(node => node.type !== 'flight' && node.location && node.location.lat && node.location.lng && filters[node.type])
     .sort((a, b) => {
-      if (!a.startTime || !b.startTime) return 0;
-      return a.startTime.toMillis() - b.startTime.toMillis();
+      const timeA = a.startTime && typeof a.startTime.toMillis === 'function' ? a.startTime.toMillis() : 
+                   (a.startTime && typeof a.startTime.getTime === 'function' ? a.startTime.getTime() : 0);
+      const timeB = b.startTime && typeof b.startTime.toMillis === 'function' ? b.startTime.toMillis() : 
+                   (b.startTime && typeof b.startTime.getTime === 'function' ? b.startTime.getTime() : 0);
+      return timeA - timeB;
     });
 
-  const polylinePositions = nodesWithLocation.map(node => [node.location.lat, node.location.lng]);
+  const polylinePositions = nodesWithLocation.map(node => [parseFloat(node.location.lat), parseFloat(node.location.lng)]);
   const defaultCenter = [-41.2865, 174.7762]; 
 
   const handleEditNode = (node) => {
@@ -150,7 +153,7 @@ export default function MapPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-12rem)] w-full rounded-3xl overflow-hidden border border-slate-700 shadow-2xl relative">
+    <div className="h-[calc(100vh-12rem)] min-h-[500px] w-full rounded-3xl overflow-hidden border border-slate-700 shadow-2xl relative">
       <div className="absolute top-4 left-4 right-4 z-[400] flex flex-wrap gap-2 pointer-events-none">
         <div className="pointer-events-auto flex gap-2 overflow-x-auto hide-scrollbar w-full p-1">
           <div className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700 mr-2 shadow-lg shrink-0">
@@ -159,7 +162,8 @@ export default function MapPage() {
           {[
             { id: 'accommodation', label: 'Hoteles', color: 'bg-orange-500' },
             { id: 'drive', label: 'Rutas', color: 'bg-purple-500' },
-            { id: 'activity', label: 'Actividades', color: 'bg-teal-500' }
+            { id: 'activity', label: 'Actividades', color: 'bg-teal-500' },
+            { id: 'car_rental', label: 'Alquileres', color: 'bg-sky-500' }
           ].map(f => (
             <button key={f.id} onClick={() => toggleFilter(f.id)} className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold border transition-all shadow-lg ${filters[f.id] ? f.color + ' text-white border-transparent' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}>
               {f.label}
@@ -186,11 +190,21 @@ export default function MapPage() {
         )}
 
         {nodesWithLocation.map((node) => (
-          <Marker key={node.id} position={[node.location.lat, node.location.lng]} icon={getCustomIcon(node.type)}>
-            <Popup className="custom-popup" closeButton={false}>
-              <NodePopupContent node={node} userPos={userPos} onEdit={handleEditNode} />
-            </Popup>
-          </Marker>
+          <React.Fragment key={node.id}>
+            <Marker position={[node.location.lat, node.location.lng]} icon={getCustomIcon(node.type)}>
+              <Popup className="custom-popup" closeButton={false}>
+                <NodePopupContent node={node} userPos={userPos} onEdit={handleEditNode} />
+              </Popup>
+            </Marker>
+            
+            {node.dropoffLocation && node.dropoffLocation.lat && node.dropoffLocation.lng && (
+              <Marker position={[node.dropoffLocation.lat, node.dropoffLocation.lng]} icon={getCustomIcon(node.type)}>
+                <Popup className="custom-popup" closeButton={false}>
+                  <NodePopupContent node={{...node, title: `${node.title} (Devolución)`}} userPos={userPos} onEdit={handleEditNode} />
+                </Popup>
+              </Marker>
+            )}
+          </React.Fragment>
         ))}
 
         {polylinePositions.length > 1 && (

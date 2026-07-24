@@ -41,6 +41,11 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
   const [locationResults, setLocationResults] = useState([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  
+  const [dropoffLocationQuery, setDropoffLocationQuery] = useState('');
+  const [dropoffLocationResults, setDropoffLocationResults] = useState([]);
+  const [isSearchingDropoff, setIsSearchingDropoff] = useState(false);
+  const [selectedDropoffLocation, setSelectedDropoffLocation] = useState(null);
 
   useEffect(() => {
     if (isOpen && editingNode) {
@@ -77,6 +82,13 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         setSelectedLocation(null);
         setLocationQuery('');
       }
+      if (editingNode.dropoffLocation) {
+        setSelectedDropoffLocation(editingNode.dropoffLocation);
+        setDropoffLocationQuery(editingNode.dropoffLocation.address || '');
+      } else {
+        setSelectedDropoffLocation(null);
+        setDropoffLocationQuery('');
+      }
     } else if (isOpen && !editingNode) {
       setFormData({
         type: 'activity', title: '', startDate: '', startTime: '', endDate: '', endTime: '', 
@@ -88,6 +100,8 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
       setNewFiles([]);
       setSelectedLocation(null);
       setLocationQuery('');
+      setSelectedDropoffLocation(null);
+      setDropoffLocationQuery('');
     }
   }, [isOpen, editingNode]);
 
@@ -105,6 +119,31 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
     } finally {
       setIsSearchingLocation(false);
     }
+  };
+
+  const searchDropoffLocation = async () => {
+    if (!dropoffLocationQuery.trim()) return;
+    setIsSearchingDropoff(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(dropoffLocationQuery)}`);
+      const data = await res.json();
+      setDropoffLocationResults(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearchingDropoff(false);
+    }
+  };
+
+  const selectDropoffLocationResult = (res) => {
+    setSelectedDropoffLocation({
+      name: res.display_name.split(',')[0],
+      address: res.display_name,
+      lat: parseFloat(res.lat),
+      lng: parseFloat(res.lon)
+    });
+    setDropoffLocationQuery(res.display_name);
+    setDropoffLocationResults([]);
   };
 
   const calculateOSRM = async () => {
@@ -216,6 +255,7 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         notes: formData.notes,
         externalUrl: formData.externalUrl,
         location: selectedLocation,
+        dropoffLocation: selectedDropoffLocation,
         // Contactos
         contactPhone: formData.contactPhone,
         contactWhatsapp: formData.contactWhatsapp,
@@ -462,6 +502,54 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
                       <p className="text-sm text-white font-medium">Ubicación guardada:</p>
                       <p className="text-xs text-slate-400 mt-1">{selectedLocation.address}</p>
                       <button type="button" onClick={() => setSelectedLocation(null)} className="text-xs text-red-400 hover:underline mt-2">Eliminar ubicación</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Ubicación de Devolución (Solo Alquiler de Coches) */}
+            {formData.type === 'car_rental' && (
+              <div className="bg-slate-800/30 p-4 rounded-2xl border border-slate-700 space-y-4">
+                <h3 className="text-sm font-medium text-teal-400 flex justify-between items-center">
+                  <span>Buscar Ubicación de Devolución</span>
+                </h3>
+                
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={dropoffLocationQuery} 
+                    onChange={e => setDropoffLocationQuery(e.target.value)} 
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); searchDropoffLocation(); } }}
+                    placeholder="Ej. Aeropuerto de Wellington" 
+                    className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-teal-500" 
+                  />
+                  <button type="button" onClick={searchDropoffLocation} disabled={isSearchingDropoff} className="bg-teal-500 hover:bg-teal-400 text-slate-900 px-4 py-2.5 rounded-xl font-bold transition-colors flex items-center justify-center min-w-[48px]">
+                    {isSearchingDropoff ? '...' : <Search size={18} />}
+                  </button>
+                </div>
+
+                {dropoffLocationResults.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto bg-slate-900 border border-slate-700 rounded-xl mt-2 hide-scrollbar">
+                    {dropoffLocationResults.map((res, i) => (
+                      <div 
+                        key={i} 
+                        onClick={() => selectDropoffLocationResult(res)}
+                        className="p-3 border-b border-slate-800 hover:bg-teal-900/30 cursor-pointer text-sm text-slate-300 transition-colors"
+                      >
+                        {res.display_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {selectedDropoffLocation && (
+                  <div className="bg-slate-950 border border-teal-500/30 rounded-xl p-3 flex items-start gap-3 mt-2">
+                    <MapPin className="w-5 h-5 text-teal-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-white font-medium">Devolución guardada:</p>
+                      <p className="text-xs text-slate-400 mt-1">{selectedDropoffLocation.address}</p>
+                      <button type="button" onClick={() => setSelectedDropoffLocation(null)} className="text-xs text-red-400 hover:underline mt-2">Eliminar ubicación</button>
                     </div>
                   </div>
                 )}

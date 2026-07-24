@@ -25,7 +25,9 @@ export default function ItineraryPage() {
   };
 
   const openEditModal = (node) => {
-    setSelectedNode(node);
+    // Si es un nodo virtual (ej. devolución), buscar el original en la lista real
+    const realNode = node.originalId ? nodes.find(n => n.id === node.originalId) : node;
+    setSelectedNode(realNode || node);
     setIsModalOpen(true);
   };
 
@@ -36,8 +38,27 @@ export default function ItineraryPage() {
     }
   }, [trip?.id, subscribeToNodes]);
 
+  // Expandir nodos para que los alquileres de coche generen un evento virtual de devolución
+  const expandedNodes = [];
+  nodes.forEach(node => {
+    expandedNodes.push(node);
+    if (node.type === 'car_rental' && node.endTime) {
+      const clone = {
+        ...node,
+        id: `${node.id}-dropoff`,
+        originalId: node.id,
+        title: `${node.title} (Devolución)`,
+        startTime: node.endTime,
+        location: node.dropoffLocation || node.location,
+        isDropoff: true,
+        cost: 0 // Para no sumar precios visualmente en resumenes del día si los hubiera
+      };
+      expandedNodes.push(clone);
+    }
+  });
+
   // Aplicar filtro actual
-  const filteredNodes = nodes.filter(node => {
+  const filteredNodes = expandedNodes.filter(node => {
     if (activeFilter === 'all') return true;
     return node.type === activeFilter;
   });

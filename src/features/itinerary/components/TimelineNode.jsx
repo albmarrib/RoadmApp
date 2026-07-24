@@ -33,6 +33,14 @@ export default function TimelineNode({ node, isLast, onClick }) {
     return `${format(startTime, "HH:mm")} ${endTime ? `- ${format(endTime, "HH:mm")}` : ''}`;
   };
 
+  const handleCardClick = () => {
+    if (!isExpanded) {
+      setIsExpanded(true);
+    } else {
+      onClick && onClick(node);
+    }
+  };
+
   return (
     <div className="flex gap-4 relative group">
       {/* Línea vertical conectora */}
@@ -50,20 +58,14 @@ export default function TimelineNode({ node, isLast, onClick }) {
       {/* Tarjeta de contenido */}
       <div className="flex-1 pb-8">
         <div 
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={handleCardClick}
           className={`bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4 cursor-pointer hover:border-teal-500/50 hover:bg-slate-800/80 transition-all shadow-lg ${isExpanded ? 'border-teal-500/30' : ''}`}
         >
           {/* Vista Compacta (Siempre visible) */}
           <div className="flex justify-between items-start gap-2">
             <div className="flex-1">
-              <h4 className="text-base font-bold text-white mb-1.5 leading-tight pr-8 relative">
+              <h4 className="text-base font-bold text-white mb-1.5 leading-tight pr-2">
                 {node.title}
-                <button 
-                  onClick={(e) => { e.stopPropagation(); onClick && onClick(node); }}
-                  className="absolute -top-1 right-0 text-xs text-teal-400 hover:underline px-2 py-1 bg-slate-800 rounded-lg"
-                >
-                  Editar
-                </button>
               </h4>
               <div className="flex items-center gap-3 text-slate-400 text-xs">
                 {startTime && (
@@ -85,7 +87,13 @@ export default function TimelineNode({ node, isLast, onClick }) {
               </div>
             </div>
             
-            <div className="text-slate-500 p-1 bg-slate-800/50 rounded-full">
+            <div 
+              className="text-slate-500 p-1 bg-slate-800/50 rounded-full hover:bg-slate-700 transition-colors z-20 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
+            >
               {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
             </div>
           </div>
@@ -103,13 +111,6 @@ export default function TimelineNode({ node, isLast, onClick }) {
                     <p className="text-sm text-indigo-300 font-medium truncate">{node.routeOrigin} ➔ {node.routeDestination}</p>
                   </div>
                 </div>
-              )}
-
-              {/* Notas */}
-              {node.notes && (
-                <p className="text-slate-300 text-sm bg-slate-950/50 p-3 rounded-xl border border-slate-800/50">
-                  {node.notes}
-                </p>
               )}
 
               {/* Contactos */}

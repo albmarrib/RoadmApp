@@ -50,11 +50,11 @@ export const useItineraryStore = create((set, get) => ({
       }
 
       const nodesRef = collection(db, `trips/${tripId}/itineraryNodes`);
-      await addDoc(nodesRef, {
+      const docRef = await addDoc(nodesRef, {
         ...nodeData,
-        attachments: uploadedAttachments
+        attachments: [...(nodeData.attachments || []), ...uploadedAttachments]
       });
-      return true;
+      return docRef.id;
     } catch (err) {
       console.error("Error adding node:", err);
       throw err;
@@ -74,7 +74,7 @@ export const useItineraryStore = create((set, get) => ({
       }
 
       const nodeRef = doc(db, `trips/${tripId}/itineraryNodes/${nodeId}`);
-      const updateData = { ...nodeData, attachments: uploadedAttachments };
+      const updateData = { ...nodeData, attachments: [...(nodeData.attachments || []), ...uploadedAttachments] };
       
       await updateDoc(nodeRef, updateData);
       return true;

@@ -6,18 +6,18 @@ import { FileText, Plus, Trash2, UploadCloud, Sparkles, Loader2, Plane, UserSqua
 import DocumentViewer from '../../../components/ui/DocumentViewer';
 import { format } from 'date-fns';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app } from '../../../config/firebase';
+import { app, db } from '../../../config/firebase';
 import { Timestamp } from 'firebase/firestore';
 
 export default function DocumentsPage() {
   const { trip } = useOutletContext();
   const navigate = useNavigate();
   const { documents, subscribeToDocuments, addDocument, deleteDocument, updateDocument, isLoading } = useDocumentStore();
-  const { addNode } = useItineraryStore();
+  const { addNode, updateNode } = useItineraryStore();
   
   const [activeTab, setActiveTab] = useState('tickets'); // 'tickets' | 'personal'
   const [isUploading, setIsUploading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(null); 
+  const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false); 
   
   const [viewerUrl, setViewerUrl] = useState(null);
   const [viewerName, setViewerName] = useState('');
@@ -54,50 +54,199 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleAnalyze = async (docId, url, e) => {
-    e.stopPropagation();
-    setIsAnalyzing(docId);
+  const handleBatchAnalyze = async () => {
+    const docsToProcess = documents.filter(d => (d.type === 'tickets' || !d.type) && !d.aiAnalyzed);
+    if (docsToProcess.length === 0) {
+      alert("No hay billetes nuevos por analizar.");
+      return;
+    }
+    
+    setIsBatchAnalyzing(true);
+    let eventsCreated = 0;
+    let eventsMerged = 0;
     
     try {
       const functions = getFunctions(app, 'europe-west1');
       const analyzeDocument = httpsCallable(functions, 'analyzeDocument');
       
-      const result = await analyzeDocument({ fileUrl: url, mimeType: 'application/pdf' });
-      
-      if (result.data.success && result.data.data) {
-        let events = Array.isArray(result.data.data) ? result.data.data : [result.data.data];
-        
-        for (const ev of events) {
-          const nodeData = {
-            type: ev.type || 'activity',
-            title: ev.title || 'Evento Importado',
-            startTime: ev.startTime ? Timestamp.fromDate(new Date(ev.startTime)) : Timestamp.now(),
-            endTime: ev.endTime ? Timestamp.fromDate(new Date(ev.endTime)) : null,
-            cost: ev.cost ? parseFloat(ev.cost) : 0,
-            currency: ev.currency || 'EUR',
-            notes: ev.details || '',
-            isAIImported: true
-          };
-          
-          if (ev.location) {
-            nodeData.location = {
-              name: ev.location.name || 'Lugar desconocido'
-            };
+      const { getDocs, query, collection, orderBy } = await import('firebase/firestore');
+      const q = query(collection(db, `trips/${trip.id}/itineraryNodes`), orderBy('startTime', 'asc'));
+      const snap = await getDocs(q);
+      const currentNodes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      for (const doc of docsToProcess) {
+        try {
+          if (doc.type === 'tickets' && !doc.aiAnalyzed) {
+            let mimeType = 'application/pdf';
+            if (doc.fileName && doc.fileName.toLowerCase().endsWith('.png')) mimeType = 'image/png';
+            if (doc.fileName && (doc.fileName.toLowerCase().endsWith('.jpg') || doc.fileName.toLowerCase().endsWith('.jpeg'))) mimeType = 'image/jpeg';
+            if (doc.fileName && doc.fileName.toLowerCase().endsWith('.webp')) mimeType = 'image/webp';
+            if (doc.fileName && (doc.fileName.toLowerCase().endsWith('.eml') || doc.fileName.toLowerCase().endsWith('.txt'))) mimeType = 'text/plain';
+
+            const result = await analyzeDocument({ fileUrl: doc.url, mimeType: mimeType });
+            
+            if (result.data && result.data.success && result.data.data) {
+              let events = Array.isArray(result.data.data) ? result.data.data : [result.data.data];
+              
+              for (const ev of events) {
+                const typeMap = { flight: 'flight', accommodation: 'accommodation', activity: 'activity', drive: 'drive', car_rental: 'car_rental' };
+                const newType = typeMap[ev.type] || 'activity';
+                
+                let isDuplicate = false;
+                if (ev.startTime) {
+                  const duplicateNode = currentNodes.find(en => {
+                    if (en.type !== newType) return false;
+                    const existingTime = en.startTime?.toMillis ? en.startTime.toMillis() : new Date(en.startTime).getTime();
+                    const newStartTime = new Date(ev.startTime).getTime();
+                    const diffHours = Math.abs(existingTime - newStartTime) / (1000 * 60 * 60);
+                    return diffHours < 12;
+                  });
+
+                  if (duplicateNode) {
+                    isDuplicate = true;
+                    let finalCost = ev.cost ? parseFloat(ev.cost) : 0;
+                    const extractedCurrency = (ev.currency || 'EUR').toUpperCase();
+                    if (extractedCurrency !== 'EUR' && trip.exchangeRate && trip.exchangeRate > 0) {
+                      finalCost = parseFloat((finalCost / trip.exchangeRate).toFixed(2));
+                    }
+
+                    const newNotes = `${duplicateNode.notes || ''}\n\n[Fusionado - Doc: ${doc.title}]\nMoneda Original: ${ev.cost} ${extractedCurrency}\n\n${ev.details || ''}`.trim();
+                    
+                    // Solo sumar el coste si es diferente de 0 y no es exactamente el mismo que ya teníamos (para no duplicar el mismo recibo)
+                    let newCost = duplicateNode.cost || 0;
+                    if (finalCost > 0 && finalCost !== duplicateNode.cost) {
+                      newCost += finalCost;
+                    }
+                    
+                    const existingAttachments = duplicateNode.attachments || [];
+                    const newAttachments = [...existingAttachments, { name: doc.title, url: doc.url }];
+                    const newTags = [...(duplicateNode.tags || []), 'REVISAR PRECIO'];
+                    
+                    const updateData = { notes: newNotes, cost: newCost, attachments: newAttachments, tags: newTags };
+                    
+                    // Si el nuevo evento tiene endTime o dropoffLocation y el original no, los fusionamos
+                    if (ev.endTime && !duplicateNode.endTime) {
+                      updateData.endTime = Timestamp.fromDate(new Date(ev.endTime));
+                    }
+                    if (ev.dropoffLocation && !duplicateNode.dropoffLocation) {
+                      const dropName = ev.dropoffLocation.name || 'Lugar de devolución';
+                      updateData.dropoffLocation = { name: dropName, address: dropName };
+                      if (ev.dropoffLocation.lat && ev.dropoffLocation.lng) {
+                        updateData.dropoffLocation.lat = parseFloat(ev.dropoffLocation.lat);
+                        updateData.dropoffLocation.lng = parseFloat(ev.dropoffLocation.lng);
+                      }
+                    }
+                    
+                    await updateNode(trip.id, duplicateNode.id, updateData);
+                    
+                    // Actualizar en la caché para las siguientes pasadas
+                    Object.assign(duplicateNode, updateData);
+                    eventsMerged++;
+                  }
+                }
+                
+                if (!isDuplicate) {
+                  let finalCost = ev.cost ? parseFloat(ev.cost) : 0;
+                  const extractedCurrency = (ev.currency || 'EUR').toUpperCase();
+                  
+                  if (extractedCurrency !== 'EUR' && trip.exchangeRate && trip.exchangeRate > 0) {
+                    finalCost = parseFloat((finalCost / trip.exchangeRate).toFixed(2));
+                  }
+
+                  const nodeData = {
+                    type: newType,
+                    title: ev.title || 'Evento Importado',
+                    startTime: ev.startTime ? Timestamp.fromDate(new Date(ev.startTime)) : Timestamp.now(),
+                    endTime: ev.endTime ? Timestamp.fromDate(new Date(ev.endTime)) : null,
+                    cost: finalCost,
+                    currency: extractedCurrency !== 'EUR' && trip.exchangeRate ? 'EUR' : extractedCurrency,
+                    notes: `[Doc: ${doc.title}]\nMoneda Original: ${ev.cost} ${extractedCurrency}\n\n${ev.details || ''}`,
+                    contactPhone: ev.contactPhone || null,
+                    contactWhatsapp: ev.contactWhatsapp || null,
+                    contactEmail: ev.contactEmail || null,
+                    contactName: ev.contactName || null,
+                    externalUrl: ev.externalUrl || null,
+                    isAIImported: true,
+                    attachments: [{ name: doc.title, url: doc.url }]
+                  };
+                  
+                  if (ev.location) {
+                    const locName = ev.location.name || 'Lugar desconocido';
+                    nodeData.location = { name: locName, address: locName };
+                    
+                    if (ev.location.lat && ev.location.lng) {
+                      nodeData.location.lat = parseFloat(ev.location.lat);
+                      nodeData.location.lng = parseFloat(ev.location.lng);
+                    } else {
+                      // Geocodificación automática de respaldo
+                      try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locName)}`);
+                        const data = await res.json();
+                        if (data && data.length > 0) {
+                          nodeData.location.lat = parseFloat(data[0].lat);
+                          nodeData.location.lng = parseFloat(data[0].lon);
+                        }
+                      } catch (geoErr) {
+                        console.error('Error buscando coordenadas para el mapa:', geoErr);
+                      }
+                    }
+                  }
+
+                  if (ev.dropoffLocation) {
+                    const dropName = ev.dropoffLocation.name || 'Lugar de devolución desconocido';
+                    nodeData.dropoffLocation = { name: dropName, address: dropName };
+                    
+                    if (ev.dropoffLocation.lat && ev.dropoffLocation.lng) {
+                      nodeData.dropoffLocation.lat = parseFloat(ev.dropoffLocation.lat);
+                      nodeData.dropoffLocation.lng = parseFloat(ev.dropoffLocation.lng);
+                    } else {
+                      try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(dropName)}`);
+                        const data = await res.json();
+                        if (data && data.length > 0) {
+                          nodeData.dropoffLocation.lat = parseFloat(data[0].lat);
+                          nodeData.dropoffLocation.lng = parseFloat(data[0].lon);
+                        }
+                      } catch (geoErr) {
+                        console.error('Error buscando coordenadas dropoff:', geoErr);
+                      }
+                    }
+                  }
+                  
+                  const createdNodeId = await addNode(trip.id, nodeData, []);
+                  currentNodes.push({ id: createdNodeId, ...nodeData }); // Añadir a cache para siguiente documento
+                  eventsCreated++;
+                }
+              }
+              await updateDocument(trip.id, doc.id, { aiAnalyzed: true });
+            }
+            
+            // Pausa de 5 segundos para no saturar la capa gratuita de Google (evita error 503/429)
+            if (docsToProcess.length > 1) {
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
           }
-          
-          await addNode(trip.id, nodeData);
+        } catch (docErr) {
+          console.error(`Error analizando doc ${doc.title}:`, docErr);
+          alert(`Fallo al analizar "${doc.title}": ${docErr.message}`);
         }
-        
-        await updateDocument(trip.id, docId, { aiAnalyzed: true });
-        
-        alert(`¡Éxito! Se han creado ${events.length} eventos en tu itinerario.`);
-        navigate(`/trip/${trip.id}/itinerary`);
       }
+      
+      if (eventsCreated > 0 || eventsMerged > 0) {
+        let msg = `Análisis completado.\nSe crearon ${eventsCreated} eventos nuevos y se fusionaron ${eventsMerged} con eventos existentes.`;
+        if (eventsMerged > 0) {
+          msg += `\n\n⚠️ IMPORTANTE: Al fusionar eventos, se han sumado los precios automáticamente. Revisa los eventos con la etiqueta 'REVISAR PRECIO' para asegurarte de que el importe total es correcto y no está duplicado.`;
+        }
+        alert(msg);
+      } else {
+        alert("Análisis completado. No se encontraron datos válidos o los documentos ya estaban procesados.");
+      }
+      
     } catch (err) {
       console.error(err);
-      alert(err.message || 'Error al procesar el documento con IA.');
+      alert(err.message || 'Error general procesando los documentos.');
     } finally {
-      setIsAnalyzing(null);
+      setIsBatchAnalyzing(false);
     }
   };
 
@@ -128,7 +277,7 @@ export default function DocumentsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex p-1 bg-slate-900 border border-slate-700 rounded-2xl mb-8 shadow-sm">
+      <div className="flex p-1 bg-slate-900 border border-slate-700 rounded-2xl mb-6 shadow-sm">
         <button
           onClick={() => setActiveTab('tickets')}
           className={`flex-1 flex justify-center items-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
@@ -146,6 +295,28 @@ export default function DocumentsPage() {
           <UserSquare2 className="w-4 h-4" /> Personales
         </button>
       </div>
+
+      {activeTab === 'tickets' && documents.some(d => (d.type === 'tickets' || !d.type) && !d.aiAnalyzed) && (
+        <div className="mb-8 flex justify-center">
+          <button
+            onClick={handleBatchAnalyze}
+            disabled={isBatchAnalyzing}
+            className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-indigo-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {isBatchAnalyzing ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Analizando documentos...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 text-yellow-300" />
+                <span>Analizar Nuevos Documentos con IA</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {isLoading && documents.length === 0 ? (
         <div className="text-slate-400 text-center py-10 animate-pulse">Cargando documentos...</div>
@@ -173,34 +344,10 @@ export default function DocumentsPage() {
                   )}
                 </div>
               </div>
-              <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-800/50">
-                {activeTab === 'tickets' ? (
-                  <button
-                    onClick={(e) => handleAnalyze(doc.id, doc.url, e)}
-                    disabled={isAnalyzing === doc.id || doc.aiAnalyzed}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      doc.aiAnalyzed 
-                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                        : isAnalyzing === doc.id
-                          ? 'bg-indigo-500/20 text-indigo-400 animate-pulse'
-                          : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-900/20'
-                    }`}
-                    title="Extraer fechas y crear evento en el itinerario automáticamente"
-                  >
-                    {isAnalyzing === doc.id ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-3.5 h-3.5" />
-                    )}
-                    {isAnalyzing === doc.id ? 'Analizando...' : doc.aiAnalyzed ? 'Analizado' : 'Analizar con IA'}
-                  </button>
-                ) : (
-                  <div></div> /* Spacer para mantener el basurero a la derecha */
-                )}
-
-                <button 
+              <div className="flex justify-end items-center mt-4 pt-4 border-t border-slate-800/50">
+                <button
                   onClick={(e) => handleDelete(doc.id, e)}
-                  className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                  className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                   title="Eliminar documento"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -211,8 +358,13 @@ export default function DocumentsPage() {
         </div>
       ) : (
         <div className="text-center py-20 bg-slate-900/50 rounded-3xl border border-dashed border-slate-700">
-          <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-          <p className="text-slate-400 mb-4">No hay documentos en esta categoría.</p>
+          <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-8 h-8 text-slate-500" />
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">Ningún documento</h3>
+          <p className="text-slate-400 max-w-sm mx-auto">
+            Sube billetes de avión, reservas de hotel o documentos personales para tenerlos siempre a mano.
+          </p>
         </div>
       )}
 

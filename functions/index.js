@@ -9,8 +9,9 @@ const db = getFirestore();
 const storage = getStorage();
 
 // Límite generoso para un usuario real (evita bots)
-const DAILY_LIMIT = 50; // Ajustado a 50 como máximo de seguridad
+const DAILY_LIMIT = 500; // Ajustado a 500 para las pruebas
 
+// Simulacro temporal para evitar el error 429 de facturación
 exports.analyzeDocument = onCall(
   {
     region: "europe-west1",
@@ -43,14 +44,14 @@ exports.analyzeDocument = onCall(
     if (currentUsage >= DAILY_LIMIT) {
       throw new HttpsError(
         "resource-exhausted",
-        "Has alcanzado el límite diario de escaneos (50). Inténtalo mañana."
+        "Has alcanzado el límite diario de escaneos (500). Inténtalo mañana."
       );
     }
 
     // 3. Obtener el archivo y procesarlo con Gemini
     try {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
       
       const response = await fetch(fileUrl);
       if (!response.ok) throw new Error("No se pudo descargar el documento");
@@ -60,47 +61,70 @@ exports.analyzeDocument = onCall(
       const base64Data = buffer.toString("base64");
 
       const prompt = `
-        Eres un asistente experto en viajes. Voy a proporcionarte un documento (puede ser un PDF o imagen de un billete de avión, tren, reserva de hotel, o entrada a actividad).
+        Eres un asistente experto en viajes. Voy a proporcionarte un documento (un PDF o imagen de un billete de avión, tren, reserva de hotel, etc.).
         
-        Tu tarea es extraer los datos clave y devolver ÚNICAMENTE un objeto JSON válido con la siguiente estructura (NO devuelvas texto markdown ni código de bloque, solo el JSON):
+        Tu tarea es extraer los datos con la MAYOR PRECISIÓN posible. Devuelve ÚNICAMENTE un objeto JSON (o un array de objetos JSON si hay varios eventos).
+        NO devuelvas texto markdown ni código de bloque.
         
+        IMPORTANTE (Vuelos con escala): Si es un vuelo con escalas, el evento principal debe abarcar desde el ORIGEN INICIAL hasta el DESTINO FINAL.
+        IMPORTANTE (Costes múltiples): Si un documento tiene varios eventos (ej: Coche de alquiler + Ferry), extrae eventos separados pero asegúrate de que el 'cost' de cada uno sea SOLO su subtotal individual. NUNCA pongas el precio Total del documento en todos los eventos para no duplicar el gasto.
+        IMPORTANTE (Alquiler de Coche): Usa SIEMPRE el tipo "car_rental", NUNCA "drive". Genera UN SOLO evento para todo el periodo de alquiler. Extrae la fecha de recogida en 'startTime' y la de devolución en 'endTime'. Para la ubicación de recogida usa el objeto 'location'. SI y SOLO SI la ubicación de devolución es distinta a la de recogida, crea también el objeto 'dropoffLocation' con las coordenadas de la devolución.
+        
+        Estructura obligatoria del JSON:
         {
-          "type": "flight" | "accommodation" | "activity" | "drive",
-          "title": "Ej: Vuelo Madrid-Tokio o Hotel Ritz",
+          "type": "flight" | "accommodation" | "activity" | "drive" | "car_rental",
+          "title": "Nombre claro (Ej: Vuelo QR149 Madrid-Tokio o Wellington Hotel)",
           "startTime": "YYYY-MM-DDTHH:mm:ss",
           "endTime": "YYYY-MM-DDTHH:mm:ss (si aplica)",
-          "cost": "Número (coste total si aparece)",
-          "currency": "EUR, USD, etc (si aparece)",
+          "cost": "Número (coste INDIVIDUAL de este evento, ej: 478.50)",
+          "currency": "Código de moneda en 3 letras (ej: EUR, USD, NZD)",
           "location": {
-            "name": "Dirección o nombre del lugar/aeropuerto"
+            "name": "Dirección completa y exacta, ciudad, país.",
+            "lat": "Número con la latitud GPS de este lugar (usa tu conocimiento general). Obligatorio para que aparezca en el mapa.",
+            "lng": "Número con la longitud GPS de este lugar (usa tu conocimiento general). Obligatorio para que aparezca en el mapa."
           },
-          "details": "Texto con detalles extra: número de reserva, asientos, terminal, compañía, teléfono, etc."
+          "dropoffLocation": {
+            "name": "Solo para car_rental: Dirección de devolución si es distinta.",
+            "lat": "Número GPS.",
+            "lng": "Número GPS."
+          },
+          "contactPhone": "Teléfono de contacto si aparece, si no null",
+          "contactWhatsapp": "Teléfono de WhatsApp si aparece (a veces coincide con el teléfono), si no null",
+          "contactEmail": "Email de contacto si aparece, si no null",
+          "contactName": "Nombre de la persona o entidad de contacto si aparece, si no null",
+          "externalUrl": "Página web de la reserva o proveedor si aparece, si no null",
+          "details": "Solo información extra como habitaciones, asientos, reglas de equipaje, localizador de reserva, terminales, etc."
         }
-        
-        Si faltan datos, déjalos como null. Si detectas varios eventos, devuelve un array de objetos JSON en su lugar.
       `;
-
-      const result = await model.generateContent([
-        prompt,
-        {
+      let parts = [{ text: prompt }];
+      if (mimeType === 'text/plain') {
+        const textContent = buffer.toString('utf-8').substring(0, 30000); // Truncar a 30KB para ignorar attachments pesados en base64
+        parts.push({ text: `\n\n--- INICIO DEL DOCUMENTO ---\n${textContent}\n--- FIN DEL DOCUMENTO ---` });
+      } else {
+        parts.push({
           inlineData: {
             data: base64Data,
             mimeType: mimeType || "application/pdf",
-          },
-        },
-      ]);
-
-      const textResponse = result.response.text();
-      
-      // Limpiar markdown residual (```json ... ```)
-      let cleanJson = textResponse.trim();
-      if (cleanJson.startsWith("```json")) {
-        cleanJson = cleanJson.replace(/```json/g, "").replace(/```/g, "").trim();
-      } else if (cleanJson.startsWith("```")) {
-        cleanJson = cleanJson.replace(/```/g, "").trim();
+          }
+        });
       }
 
-      const parsedData = JSON.parse(cleanJson);
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: parts }],
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const textResponse = result.response.text();
+      console.log("GEMINI RAW RESPONSE:\n", textResponse);
+      
+      let parsedData;
+      try {
+        parsedData = JSON.parse(textResponse);
+      } catch (parseErr) {
+        throw new Error(`Error de formato de IA. Respuesta recibida: ${textResponse.substring(0, 300)}...`);
+      }
 
       // Incrementar el uso diario de este usuario
       await usageRef.set(

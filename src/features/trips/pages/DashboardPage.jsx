@@ -1,13 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTripStore } from '../../../store/tripStore';
 import { useAuthStore } from '../../../store/authStore';
 import TripCard from '../components/TripCard';
-import { Plus } from 'lucide-react';
+import CreateTripModal from '../components/CreateTripModal';
+import JoinTripModal from '../components/JoinTripModal';
+import { Plus, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function DashboardPage() {
   const { user, profile } = useAuthStore();
   const { trips, isLoading, fetchMyTrips, error } = useTripStore();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
 
   useEffect(() => {
     if (user?.uid) {
@@ -29,10 +33,23 @@ export default function DashboardPage() {
           <p className="text-slate-400">¿A dónde vamos hoy?</p>
         </div>
         
-        <button className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-teal-500/25 transition-all flex items-center justify-center gap-2 whitespace-nowrap">
-          <Plus className="w-5 h-5" />
-          <span>Nuevo Viaje</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsJoinModalOpen(true)}
+            className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 px-5 rounded-xl border border-slate-700 hover:border-slate-600 transition-all flex items-center justify-center gap-2 whitespace-nowrap shadow-lg"
+          >
+            <Users className="w-5 h-5 text-indigo-400" />
+            <span>Unirse a viaje</span>
+          </button>
+          
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-teal-500/25 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Nuevo Viaje</span>
+          </button>
+        </div>
       </header>
 
       {error && (
@@ -59,11 +76,20 @@ export default function DashboardPage() {
             <Plus className="w-10 h-10 text-slate-500" />
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">No tienes viajes planeados</h3>
-          <p className="text-slate-400 max-w-sm text-center">
+          <p className="text-slate-400 max-w-sm text-center mb-6">
             Crea tu primer viaje para empezar a planificar tu itinerario, controlar los gastos y organizar tu equipaje.
           </p>
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 px-6 py-2 rounded-xl font-medium transition-colors"
+          >
+            Crear viaje ahora
+          </button>
         </div>
       )}
+
+      <CreateTripModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+      <JoinTripModal isOpen={isJoinModalOpen} onClose={() => setIsJoinModalOpen(false)} />
     </div>
   );
 }

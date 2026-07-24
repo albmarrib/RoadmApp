@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, ShieldAlert, Briefcase, MapPin, Calendar, Image as ImageIcon } from 'lucide-react';
+import { X, Save, ShieldAlert, Briefcase, MapPin, Calendar, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { useTripStore } from '../../../store/tripStore';
 import { Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 export default function TripSettingsModal({ trip, isOpen, onClose }) {
-  const { updateTrip } = useTripStore();
+  const { updateTrip, deleteTrip } = useTripStore();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -95,6 +98,20 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
     }
   };
 
+  const handleDeleteTrip = async () => {
+    if (confirm("¿Estás completamente seguro de que quieres eliminar este viaje? Esta acción no se puede deshacer y borrará todo el itinerario, documentos y gastos.")) {
+      setIsDeleting(true);
+      try {
+        await deleteTrip(trip.id);
+        onClose();
+        navigate('/');
+      } catch (error) {
+        alert("Error al eliminar el viaje: " + error.message);
+        setIsDeleting(false);
+      }
+    }
+  };
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6">
@@ -121,6 +138,17 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
           
           <form onSubmit={handleSubmit} className="space-y-8">
             
+            {/* Código de Invitación (Solo Lectura) */}
+            <section className="bg-indigo-900/20 p-5 rounded-2xl border border-indigo-500/30 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-indigo-400 uppercase tracking-wider mb-1">Código de Invitación</h3>
+                <p className="text-xs text-slate-400">Pasa este código a tus amigos para que se unan al viaje.</p>
+              </div>
+              <div className="bg-slate-950 px-4 py-2 rounded-xl border border-indigo-500/50">
+                <span className="font-mono text-xl font-bold tracking-widest text-white">{trip.inviteCode || 'N/A'}</span>
+              </div>
+            </section>
+
             {/* 1. Datos Básicos */}
             <section className="space-y-4">
               <h3 className="text-sm font-bold text-teal-400 uppercase tracking-wider border-b border-slate-800 pb-2">Información Principal</h3>
@@ -265,6 +293,19 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
               <Save className="w-5 h-5" />
               {isSubmitting ? 'Guardando...' : 'Guardar Configuración'}
             </button>
+            
+            <div className="pt-6 mt-6 border-t border-red-500/20">
+              <h3 className="text-sm font-bold text-red-500 uppercase tracking-wider mb-4">Zona de Peligro</h3>
+              <button 
+                type="button" 
+                onClick={handleDeleteTrip}
+                disabled={isDeleting}
+                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Trash2 className="w-5 h-5" />
+                {isDeleting ? 'Eliminando...' : 'Eliminar Viaje'}
+              </button>
+            </div>
           </form>
         </motion.div>
       </div>
