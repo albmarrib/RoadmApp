@@ -1,9 +1,10 @@
 import { Outlet, useParams, Link, useLocation } from 'react-router-dom';
-import { Map, CalendarDays, Luggage, Wallet, ArrowLeft, FileText, CloudDownload, Loader2, Settings } from 'lucide-react';
+import { Map, CalendarDays, Luggage, Wallet, ArrowLeft, FileText, CloudDownload, Loader2, Settings, Printer } from 'lucide-react';
 import { useTripStore } from '../store/tripStore';
 import { useAuthStore } from '../store/authStore';
 import { useEffect, useState } from 'react';
 import TripSettingsModal from '../features/trips/components/TripSettingsModal';
+import PrintableItinerary from '../features/itinerary/components/PrintableItinerary';
 
 export default function TripLayout() {
   const { tripId } = useParams();
@@ -129,7 +130,8 @@ export default function TripLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <>
+    <div className="min-h-screen bg-slate-950 text-white print:hidden">
       <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex items-center h-16 gap-4">
@@ -141,6 +143,14 @@ export default function TripLayout() {
               <h1 className="text-lg font-bold text-white truncate">{trip.title}</h1>
               <p className="text-xs text-teal-400 truncate">{trip.destination}</p>
             </div>
+
+            <button 
+              onClick={() => window.print()}
+              className="p-2 text-slate-400 hover:text-teal-400 hover:bg-slate-800 rounded-full transition-colors"
+              title="Exportar a PDF / Imprimir"
+            >
+              <Printer className="w-5 h-5" />
+            </button>
 
             <button 
               onClick={() => setIsSettingsOpen(true)}
@@ -216,5 +226,7 @@ export default function TripLayout() {
         onClose={() => setIsSettingsOpen(false)} 
       />
     </div>
+    <PrintableItinerary trip={trip} />
+    </>
   );
 }

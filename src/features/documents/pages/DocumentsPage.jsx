@@ -128,7 +128,7 @@ export default function DocumentsPage() {
                     
                     const updateData = { notes: newNotes, cost: newCost, attachments: newAttachments, tags: newTags };
                     
-                    // Si el nuevo evento tiene endTime o dropoffLocation y el original no, los fusionamos
+                    // Si el nuevo evento tiene datos extra y el original no, los fusionamos
                     if (ev.endTime && !duplicateNode.endTime) {
                       updateData.endTime = Timestamp.fromDate(new Date(ev.endTime));
                     }
@@ -140,6 +140,13 @@ export default function DocumentsPage() {
                         updateData.dropoffLocation.lng = parseFloat(ev.dropoffLocation.lng);
                       }
                     }
+                    
+                    // Fusionar datos de contacto si faltan en el original
+                    if (ev.contactPhone && !duplicateNode.contactPhone) updateData.contactPhone = ev.contactPhone;
+                    if (ev.contactWhatsapp && !duplicateNode.contactWhatsapp) updateData.contactWhatsapp = ev.contactWhatsapp;
+                    if (ev.contactEmail && !duplicateNode.contactEmail) updateData.contactEmail = ev.contactEmail;
+                    if (ev.contactName && !duplicateNode.contactName) updateData.contactName = ev.contactName;
+                    if (ev.externalUrl && !duplicateNode.externalUrl) updateData.externalUrl = ev.externalUrl;
                     
                     await updateNode(trip.id, duplicateNode.id, updateData);
                     
