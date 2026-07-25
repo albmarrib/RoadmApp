@@ -41,38 +41,38 @@ export default function PrintableItinerary({ trip }) {
   };
 
   return (
-    <div className="hidden print:block bg-white text-black font-sans p-4 max-w-4xl mx-auto">
-      <div className="border-b-4 border-black pb-4 mb-6">
-        <h1 className="text-4xl font-black uppercase tracking-tight">{trip.title}</h1>
-        <p className="text-xl text-gray-700 font-medium">{trip.destination}</p>
+    <div className="hidden print:block bg-white text-black font-sans p-0 w-full mx-auto">
+      <div className="border-b-2 border-black pb-1 mb-2">
+        <h1 className="text-2xl font-black uppercase tracking-tight leading-none">{trip.title}</h1>
+        <p className="text-sm text-gray-700 font-medium">{trip.destination}</p>
       </div>
 
       {Object.entries(groupedByDay).map(([dateStr, dayNodes]) => (
-        <div key={dateStr} className="mb-8 avoid-page-break">
-          <h2 className="text-xl font-bold border-b-2 border-black pb-1 mb-4 bg-gray-100 px-3 py-2">
+        <div key={dateStr} className="mb-3 avoid-page-break">
+          <h2 className="text-sm font-bold border-b border-black pb-0.5 mb-1 bg-gray-200 px-1 py-0.5">
             {format(parseISO(dateStr), "EEEE, d 'de' MMMM yyyy", { locale: es }).toUpperCase()}
           </h2>
-          <div className="space-y-4 px-2">
+          <div className="space-y-1 px-1">
             {dayNodes.map(node => {
               const time = node.startTime?.toMillis ? node.startTime.toMillis() : new Date(node.startTime).getTime();
               const timeStr = format(time, 'HH:mm');
               return (
-                <div key={node.id} className="flex flex-row items-start gap-4 pb-3 border-b border-gray-300 avoid-page-break">
-                  <div className="w-14 flex-shrink-0 font-bold text-lg pt-0.5">{timeStr}</div>
+                <div key={node.id} className="flex flex-row items-start gap-2 pb-1 border-b border-gray-300 avoid-page-break">
+                  <div className="w-10 flex-shrink-0 font-bold text-sm pt-0">{timeStr}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-lg flex items-start sm:items-center gap-2 mb-1 flex-col sm:flex-row">
-                      <span className="text-[10px] font-bold border border-black px-1.5 py-0.5 bg-black text-white">
+                    <div className="font-bold text-sm flex items-center gap-1.5 mb-0">
+                      <span className="text-[8px] font-bold border border-black px-1 py-0 bg-black text-white leading-tight">
                         {typeLabels[node.type] || 'EVENTO'}
                       </span>
-                      <span>{node.title}</span>
+                      <span className="leading-tight">{node.title}</span>
                     </div>
                     {node.location?.name && (
-                      <div className="text-sm text-gray-800 break-words">
+                      <div className="text-[10px] text-gray-800 break-words leading-tight mt-0.5">
                         <strong>Lugar:</strong> {node.location.name}
                       </div>
                     )}
                     {(node.contactPhone || node.contactEmail || node.externalUrl) && (
-                      <div className="text-sm text-gray-800 flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                      <div className="text-[10px] text-gray-800 flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 leading-tight">
                         {node.contactPhone && <span><strong>Telf:</strong> {node.contactPhone}</span>}
                         {node.contactEmail && <span><strong>Email:</strong> {node.contactEmail}</span>}
                         {node.externalUrl && <span><strong>Web:</strong> {node.externalUrl}</span>}
@@ -87,10 +87,11 @@ export default function PrintableItinerary({ trip }) {
       ))}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
-          @page { margin: 1.5cm; }
+          @page { margin: 0.5cm; }
           body { 
             background-color: white !important; 
             color: black !important;
+            font-size: 12px;
           }
           .avoid-page-break { 
             page-break-inside: avoid; 

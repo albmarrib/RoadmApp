@@ -154,10 +154,10 @@ export default function ItineraryPage() {
                 onNodeClick={openEditModal} 
               />
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-0">
                 {sortedDates.length > 0 ? sortedDates.map((dateStr) => (
-                  <div key={dateStr} className="pb-2">
-                    <div className="flex justify-center sticky top-20 z-10 py-2 bg-slate-950/90 backdrop-blur-md -mx-4 px-4 mb-1">
+                  <div key={dateStr} className="pb-1">
+                    <div className="flex justify-center sticky top-20 z-10 py-1.5 bg-slate-950/90 backdrop-blur-md -mx-4 px-4 mb-1">
                       <span className="text-[10px] sm:text-xs font-bold text-teal-400 uppercase tracking-widest bg-teal-500/10 border border-teal-500/30 shadow-lg px-4 py-1.5 rounded-full">
                         {dateStr === 'Sin Fecha' ? 'Sin Fecha' : format(new Date(dateStr), "EEEE, d 'de' MMMM", { locale: es })}
                       </span>

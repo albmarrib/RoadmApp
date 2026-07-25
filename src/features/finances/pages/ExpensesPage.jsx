@@ -177,7 +177,7 @@ export default function ExpensesPage() {
             activeTab === 'list' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-300'
           }`}
         >
-          <Receipt className="w-4 h-4" /> Gastos
+          <Receipt className="w-4 h-4" /> En Ruta
         </button>
         {trip.isGroupMode && (
           <button
@@ -247,7 +247,18 @@ export default function ExpensesPage() {
                       <div key={idx}>
                         <div className="flex justify-between text-sm mb-1">
                           <span className="text-slate-300 flex items-center gap-2 capitalize">
-                            <span className="text-teal-500">{getIconForCategory(cat)}</span> {cat}
+                            <span className="text-teal-500">{getIconForCategory(cat)}</span> 
+                            {
+                              {
+                                flight: 'Vuelos',
+                                accommodation: 'Alojamiento',
+                                drive: 'Transporte',
+                                car_rental: 'Coche de Alquiler',
+                                activity: 'Actividades',
+                                food: 'Comida',
+                                other: 'Otros'
+                              }[cat?.toLowerCase()] || cat
+                            }
                           </span>
                           <span className="font-bold text-white">{amount.toFixed(2)} {trip.currency || 'EUR'}</span>
                         </div>

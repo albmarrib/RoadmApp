@@ -134,7 +134,7 @@ export default function TripLayout() {
   return (
     <>
     <div className="min-h-screen bg-slate-950 text-white print:hidden">
-      <header className="h-16 bg-slate-900 border-b border-slate-800 sticky top-0 z-50 overflow-hidden">
+      <header className="h-14 bg-slate-900 border-b border-slate-800 sticky top-0 z-50 overflow-hidden">
         
         {/* FONDO MARCA DE AGUA (Texto cortado por JS para evitar desbordamiento físico) */}
         <div className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 px-2 text-center overflow-hidden" style={{ width: '100%' }}>
@@ -143,7 +143,7 @@ export default function TripLayout() {
           </h1>
         </div>
 
-        <div className="max-w-5xl mx-auto px-2 sm:px-4 h-full flex items-center justify-between relative z-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between relative z-10">
           
           {/* LADO IZQUIERDO: Botón Volver */}
           <Link to="/" className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors flex-shrink-0">
@@ -151,8 +151,8 @@ export default function TripLayout() {
           </Link>
           
           {/* CENTRO: Reloj Dual (Protagonista) */}
-          <div className="flex-1 flex justify-center px-2">
-            <DualClock destination={trip.destination} />
+          <div className="flex-1 flex justify-start sm:justify-center pl-2 sm:pl-0">
+            <DualClock destination={trip.destination} origin={trip.origin} />
           </div>
 
           {/* LADO DERECHO: Iconos de acción */}

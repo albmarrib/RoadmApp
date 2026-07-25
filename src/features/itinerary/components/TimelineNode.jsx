@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Plane, Hotel, Car, MapPin, Paperclip, Clock, CarFront, ChevronDown, ChevronUp, Phone, MessageCircle, Mail, User, Route, Edit3 } from 'lucide-react';
+import { Plane, Hotel, Car, MapPin, Paperclip, Clock, CarFront, ChevronDown, ChevronUp, Phone, MessageCircle, Mail, User, Route, Edit3, Globe } from 'lucide-react';
 import DocumentViewer from '../../../components/ui/DocumentViewer';
 
 const getIcon = (type) => {
@@ -38,50 +38,54 @@ export default function TimelineNode({ node, isLast, onClick }) {
   };
 
   return (
-    <div className="w-full relative group mb-3">
+    <div className="w-full relative group mb-2">
       {/* Tarjeta de contenido */}
       <div className="w-full">
         <div 
           onClick={handleCardClick}
-          className={`bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4 cursor-pointer hover:border-teal-500/50 hover:bg-slate-800/80 transition-all shadow-lg ${isExpanded ? 'border-teal-500/30' : ''}`}
+          className={`bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl px-3 py-2.5 cursor-pointer hover:border-teal-500/50 hover:bg-slate-800/80 transition-all shadow-lg ${isExpanded ? 'border-teal-500/30' : ''}`}
         >
           {/* Vista Compacta (Siempre visible) */}
-          <div className="flex justify-between items-start gap-3">
-            <div className={`w-10 h-10 rounded-xl shrink-0 ${bg} border ${border} flex items-center justify-center shadow-sm`}>
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 sm:gap-y-0.5 items-center">
+            {/* Icono */}
+            <div className={`w-10 h-10 rounded-xl shrink-0 ${bg} border ${border} flex items-center justify-center shadow-sm col-start-1 row-start-1 sm:row-span-2`}>
               <Icon className={`w-5 h-5 ${color}`} />
             </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-base font-bold text-white mb-1.5 leading-tight truncate pr-2">
-                {node.title}
-              </h4>
-              <div className="flex items-center gap-3 text-slate-400 text-xs">
-                {startTime && (
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-slate-500" />
-                    <span className="font-medium text-slate-300">{formatDates()}</span>
-                  </div>
-                )}
-                {node.cost && (
-                  <span className="bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded text-xs font-semibold border border-emerald-500/20">
-                    {node.cost} {node.currency}
-                  </span>
-                )}
-                {node.routeDistanceKm && (
-                  <span className="bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded text-xs font-semibold border border-indigo-500/20">
-                    {node.routeDistanceKm} km
-                  </span>
-                )}
-              </div>
-            </div>
-            
+
+            {/* Título */}
+            <h4 className="text-base font-bold text-white leading-tight truncate col-start-2 row-start-1 self-center sm:self-end pt-0 sm:pt-0.5">
+              {node.title}
+            </h4>
+
+            {/* Chevron */}
             <div 
-              className="text-slate-500 p-1 bg-slate-800/50 rounded-full hover:bg-slate-700 transition-colors z-20 cursor-pointer"
+              className="text-slate-500 p-1 bg-slate-800/50 rounded-full hover:bg-slate-700 transition-colors z-20 cursor-pointer col-start-3 row-start-1 sm:row-span-2 self-center"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsExpanded(!isExpanded);
               }}
             >
               {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </div>
+
+            {/* Info (Fecha, Precio, Distancia) */}
+            <div className="col-start-1 col-span-3 sm:col-start-2 sm:col-span-1 row-start-2 flex items-center gap-2 flex-wrap text-slate-400 text-xs mt-2.5 sm:mt-0 self-start pb-0.5 sm:pb-0">
+              {startTime && (
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <span className="font-medium text-slate-300">{formatDates()}</span>
+                </div>
+              )}
+              {node.cost && (
+                <span className="bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded text-xs font-semibold border border-emerald-500/20 shrink-0">
+                  {node.cost} {node.currency}
+                </span>
+              )}
+              {node.routeDistanceKm && (
+                <span className="bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded text-xs font-semibold border border-indigo-500/20 shrink-0">
+                  {node.routeDistanceKm} km
+                </span>
+              )}
             </div>
           </div>
           
@@ -198,8 +202,9 @@ export default function TimelineNode({ node, isLast, onClick }) {
               )}
 
               {node.externalUrl && (
-                <a href={node.externalUrl} target="_blank" rel="noreferrer" className="text-sm text-teal-400 hover:underline break-all block">
-                  Ver enlace adjunto
+                <a href={node.externalUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sm text-teal-400 hover:text-teal-300 hover:underline break-all w-fit transition-colors">
+                  <Globe className="w-4 h-4 shrink-0" />
+                  <span>Visitar página web</span>
                 </a>
               )}
 

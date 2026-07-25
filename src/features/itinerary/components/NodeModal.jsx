@@ -354,36 +354,36 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
             </div>
 
             {/* Fechas Inicio */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="min-w-0">
                 <label className="block text-sm font-medium text-slate-400 mb-1">
                   {formData.type === 'accommodation' ? 'Check-in' : formData.type === 'car_rental' ? 'Recogida (Día)' : 'Día (Obligatorio)'}
                 </label>
-                <input required type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" />
+                <input required type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500 appearance-none" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-sm font-medium text-slate-400 mb-1">
                   {formData.type === 'accommodation' ? 'Hora entrada' : formData.type === 'car_rental' ? 'Recogida (Hora)' : 'Hora de inicio'}
                 </label>
-                <input type="time" value={formData.startTime} onChange={e => setFormData({...formData, startTime: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" />
+                <input type="time" value={formData.startTime} onChange={e => setFormData({...formData, startTime: e.target.value})} className="w-full min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500 appearance-none" />
               </div>
             </div>
 
             {/* Fechas Fin (Hotel, Coche, Vuelos...) */}
             {(formData.type === 'accommodation' || formData.type === 'car_rental' || formData.type === 'flight') && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 bg-slate-800/20 p-3 rounded-xl border border-slate-800">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-800/20 p-3 rounded-xl border border-slate-800">
+                  <div className="min-w-0">
                     <label className="block text-sm font-medium text-slate-400 mb-1">
                       {formData.type === 'accommodation' ? 'Check-out' : formData.type === 'car_rental' ? 'Devolución (Día)' : 'Día Fin'}
                     </label>
-                    <input type={formData.type === 'accommodation' ? "date" : "date"} required={formData.type === 'accommodation'} value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" />
+                    <input type={formData.type === 'accommodation' ? "date" : "date"} required={formData.type === 'accommodation'} value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500 appearance-none" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-sm font-medium text-slate-400 mb-1">
                       {formData.type === 'accommodation' ? 'Hora salida' : formData.type === 'car_rental' ? 'Devolución (Hora)' : 'Hora llegada'}
                     </label>
-                    <input type="time" value={formData.endTime} onChange={e => setFormData({...formData, endTime: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" />
+                    <input type="time" value={formData.endTime} onChange={e => setFormData({...formData, endTime: e.target.value})} className="w-full min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500 appearance-none" />
                   </div>
                 </div>
               </div>

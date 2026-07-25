@@ -12,6 +12,7 @@ export default function CreateTripModal({ isOpen, onClose }) {
 
   const [title, setTitle] = useState('');
   const [destination, setDestination] = useState('');
+  const [origin, setOrigin] = useState('España');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [coverImageFile, setCoverImageFile] = useState(null);
@@ -55,6 +56,7 @@ export default function CreateTripModal({ isOpen, onClose }) {
       const tripData = {
         title,
         destination,
+        origin,
         startDate: startDate ? Timestamp.fromDate(new Date(startDate)) : null,
         endDate: endDate ? Timestamp.fromDate(new Date(endDate)) : null,
       };
@@ -104,43 +106,59 @@ export default function CreateTripModal({ isOpen, onClose }) {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Destino Principal</label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-              <input 
-                type="text" 
-                value={destination}
-                onChange={e => setDestination(e.target.value)}
-                placeholder="Ej: Nueva Zelanda"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Origen (Casa)</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <input 
+                  type="text" 
+                  value={origin}
+                  onChange={e => setOrigin(e.target.value)}
+                  placeholder="Ej: España"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Destino Principal</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <input 
+                  type="text" 
+                  value={destination}
+                  onChange={e => setDestination(e.target.value)}
+                  placeholder="Ej: Nueva Zelanda"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="min-w-0">
               <label className="block text-sm font-medium text-slate-300 mb-1">Fecha de Inicio</label>
-              <div className="relative">
+              <div className="relative min-w-0">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input 
                   type="date" 
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-slate-200 focus:outline-none focus:border-teal-500 text-sm"
+                  className="w-full min-w-0 bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-slate-200 focus:outline-none focus:border-teal-500 text-sm appearance-none"
                 />
               </div>
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block text-sm font-medium text-slate-300 mb-1">Fecha de Fin</label>
-              <div className="relative">
+              <div className="relative min-w-0">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input 
                   type="date" 
                   value={endDate}
                   onChange={e => setEndDate(e.target.value)}
                   min={startDate}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-slate-200 focus:outline-none focus:border-teal-500 text-sm"
+                  className="w-full min-w-0 bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-slate-200 focus:outline-none focus:border-teal-500 text-sm appearance-none"
                 />
               </div>
             </div>

@@ -31,19 +31,19 @@ export default function CurrencyConverter({ trip }) {
   };
 
   return (
-    <div className="p-6">
-      <h3 className="text-xl font-bold text-white mb-6">Conversor de Moneda</h3>
+    <div className="p-3 sm:p-4">
+      <h3 className="text-lg font-bold text-white mb-3">Conversor de Moneda</h3>
       
       {!trip?.exchangeRate ? (
-        <div className="bg-amber-900/20 border border-amber-500/20 text-amber-300 p-4 rounded-xl text-sm mb-6">
+        <div className="bg-amber-900/20 border border-amber-500/20 text-amber-300 p-3 rounded-xl text-xs mb-4">
           <p>⚠️ No has configurado el <strong>Factor de Conversión</strong> para este viaje.</p>
-          <p className="mt-1">Ve a la configuración del viaje (el engranaje arriba a la derecha) y añade la tasa de cambio para que esta calculadora funcione.</p>
+          <p className="mt-1">Ve a la configuración del viaje y añade la tasa de cambio para que esta calculadora funcione.</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           
           <div className="relative">
-            <label className="block text-sm font-medium text-slate-400 mb-2">Importe en Moneda Local</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">Importe en Moneda Local</label>
             {/* Contenedor principal con flex-1 y min-w-0 para evitar desbordamiento en iOS */}
             <div className="flex gap-2 w-full min-w-0">
               <input
@@ -51,15 +51,15 @@ export default function CurrencyConverter({ trip }) {
                 value={localAmount}
                 onChange={(e) => setLocalAmount(e.target.value)}
                 placeholder="0.00"
-                className="flex-1 w-full min-w-0 bg-slate-950 border border-slate-800 rounded-xl py-4 px-4 text-3xl font-black text-white placeholder-slate-600 focus:outline-none focus:border-teal-500 transition-colors appearance-none"
+                className="flex-1 w-full min-w-0 bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-2xl font-black text-white placeholder-slate-600 focus:outline-none focus:border-teal-500 transition-colors appearance-none"
               />
               <button 
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessing}
-                className="w-16 flex-shrink-0 bg-slate-800 hover:bg-slate-700 text-teal-400 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50"
+                className="w-12 flex-shrink-0 bg-slate-800 hover:bg-slate-700 text-teal-400 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50"
                 title="Escanear precio con la cámara"
               >
-                {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
+                {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
               </button>
               
               {/* Input oculto para abrir la cámara */}
@@ -72,16 +72,16 @@ export default function CurrencyConverter({ trip }) {
                 className="hidden"
               />
             </div>
-            <p className="text-xs text-slate-500 mt-2">Factor aplicado: 1 EUR = {exchangeRate} Local</p>
+            <p className="text-[10px] text-slate-500 mt-1">Factor aplicado: 1 EUR = {exchangeRate} Local</p>
           </div>
 
-          <div className="flex justify-center">
-            <RefreshCw className="w-5 h-5 text-slate-600" />
+          <div className="flex justify-center -my-1">
+            <RefreshCw className="w-4 h-4 text-slate-600" />
           </div>
 
-          <div className="bg-teal-950/30 border border-teal-500/30 rounded-xl p-6 text-center">
-            <label className="block text-sm font-medium text-teal-400/70 mb-1">Equivale a (Euros)</label>
-            <div className="text-4xl font-black text-teal-400 truncate">
+          <div className="bg-teal-950/30 border border-teal-500/30 rounded-xl p-4 text-center">
+            <label className="block text-xs font-medium text-teal-400/70 mb-1">Equivale a (Euros)</label>
+            <div className="text-3xl font-black text-teal-400 truncate">
               {eurVal.toFixed(2)} €
             </div>
           </div>

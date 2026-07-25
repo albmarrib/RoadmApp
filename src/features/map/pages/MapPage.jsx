@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import { useItineraryStore } from '../../../store/itineraryStore';
 import { format } from 'date-fns';
 import L from 'leaflet';
 import NodeModal from '../../itinerary/components/NodeModal';
-import { Navigation, Loader2, Navigation2 } from 'lucide-react';
+import { Navigation, Loader2, Navigation2, Layers, Bed, Car, Camera, Key, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const getCustomIcon = (type) => {
   const baseClass = "w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-white text-white";
@@ -20,44 +21,53 @@ const getCustomIcon = (type) => {
 };
 
 const userIcon = L.divIcon({
-  html: `<div class="w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-xl shadow-blue-500/50 animate-pulse"></div>`,
-  className: '', iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -12]
+  html: `<div class="w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-[0_0_15px_rgba(59,130,246,0.8)] relative animate-pulse"><div class="absolute inset-0 rounded-full bg-blue-400 opacity-50 animate-ping"></div></div>`,
+  className: '',
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
 });
 
-// Componente para manejar la geolocalización
+const MapEventsHandler = ({ tripId }) => {
+  useMapEvents({
+    moveend: (e) => {
+      if (!tripId) return;
+      const map = e.target;
+      const center = map.getCenter();
+      localStorage.setItem(`map_state_${tripId}`, JSON.stringify({
+        center: [center.lat, center.lng],
+        zoom: map.getZoom()
+      }));
+    }
+  });
+  return null;
+};
+
 function LocationHandler({ setUserPos, setHasPermissionError }) {
   const map = useMap();
   useEffect(() => {
-    map.locate({ watch: true, enableHighAccuracy: true });
-    
-    map.on('locationfound', (e) => setUserPos(e.latlng));
-    map.on('locationerror', () => setHasPermissionError(true));
-
-    return () => {
-      map.off('locationfound');
-      map.off('locationerror');
-      map.stopLocate();
+    map.locate({ setView: false, watch: true, enableHighAccuracy: true });
+    const onLocationFound = (e) => { setUserPos([e.latlng.lat, e.latlng.lng]); setHasPermissionError(false); };
+    const onLocationError = (e) => {
+      console.warn("Location error:", e.message);
+      if (e.code === 1) setHasPermissionError(true);
     };
+    map.on('locationfound', onLocationFound);
+    map.on('locationerror', onLocationError);
+    return () => { map.off('locationfound', onLocationFound); map.off('locationerror', onLocationError); map.stopLocate(); };
   }, [map, setUserPos, setHasPermissionError]);
   return null;
 }
 
-// Botón para centrar mapa en el usuario
 function CenterUserButton({ userPos }) {
   const map = useMap();
+  if (!userPos) return null;
   return (
-    <button 
-      onClick={() => userPos && map.flyTo(userPos, 14)}
-      disabled={!userPos}
-      className={`absolute bottom-6 right-6 z-[400] p-3 rounded-full shadow-2xl transition-all ${userPos ? 'bg-blue-500 text-white hover:bg-blue-400 hover:scale-110' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}`}
-      title="Centrar en mi ubicación"
-    >
-      <Navigation2 size={24} />
+    <button onClick={() => map.flyTo(userPos, 15)} className="absolute bottom-6 right-6 z-[400] bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-full shadow-2xl transition-all border border-blue-400/30">
+      <Navigation2 size={24} className="fill-current" />
     </button>
   );
 }
 
-// Contenido del Popup con cálculo OSRM
 function NodePopupContent({ node, userPos, onEdit }) {
   const [routeInfo, setRouteInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -119,6 +129,7 @@ export default function MapPage() {
   const { trip } = useOutletContext();
   const { nodes, subscribeToNodes } = useItineraryStore();
   const [filters, setFilters] = useState({ accommodation: true, drive: true, activity: true, car_rental: true });
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
   
@@ -145,7 +156,11 @@ export default function MapPage() {
     });
 
   const polylinePositions = nodesWithLocation.map(node => [parseFloat(node.location.lat), parseFloat(node.location.lng)]);
-  const defaultCenter = [-41.2865, 174.7762]; 
+  
+  const savedStateStr = localStorage.getItem(`map_state_${trip?.id}`);
+  const savedState = savedStateStr ? JSON.parse(savedStateStr) : null;
+  const defaultCenter = savedState?.center || [-41.2865, 174.7762]; 
+  const defaultZoom = savedState?.zoom || 6;
 
   const handleEditNode = (node) => {
     setSelectedNode(node);
@@ -154,30 +169,64 @@ export default function MapPage() {
 
   return (
     <div className="h-[calc(100vh-12rem)] min-h-[500px] w-full rounded-3xl overflow-hidden border border-slate-700 shadow-2xl relative">
-      <div className="absolute top-4 left-4 right-4 z-[390] flex flex-wrap gap-2 pointer-events-none">
-        <div className="pointer-events-auto flex gap-2 overflow-x-auto hide-scrollbar w-full p-1">
-          <div className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700 mr-2 shadow-lg shrink-0">
-            <h2 className="text-sm font-bold text-teal-400">Ver en mapa:</h2>
-          </div>
-          {[
-            { id: 'accommodation', label: 'Hoteles', color: 'bg-orange-500' },
-            { id: 'drive', label: 'Rutas', color: 'bg-purple-500' },
-            { id: 'activity', label: 'Actividades', color: 'bg-teal-500' },
-            { id: 'car_rental', label: 'Alquileres', color: 'bg-sky-500' }
-          ].map(f => (
-            <button key={f.id} onClick={() => toggleFilter(f.id)} className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold border transition-all shadow-lg ${filters[f.id] ? f.color + ' text-white border-transparent' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
+      {/* Botón y Menú Flotante de Filtros */}
+      <div className="absolute top-4 right-4 z-[400] flex flex-col items-end">
+        <button 
+          onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+          className={`p-3 rounded-full shadow-2xl transition-all border ${isFilterMenuOpen ? 'bg-teal-500 text-white border-teal-400' : 'bg-slate-900/90 text-slate-300 border-slate-700 hover:bg-slate-800'} backdrop-blur-md`}
+          title="Capas del mapa"
+        >
+          <Layers size={24} />
+        </button>
+
+        <AnimatePresence>
+          {isFilterMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: -10, transformOrigin: 'top right' }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="mt-3 bg-slate-900/90 backdrop-blur-xl border border-slate-700 p-2 rounded-2xl shadow-2xl flex flex-col gap-1 min-w-[200px]"
+            >
+              <div className="px-3 py-2 border-b border-slate-700/50 mb-1">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ver en mapa</h3>
+              </div>
+              {[
+                { id: 'accommodation', label: 'Hoteles', color: 'text-orange-500', bg: 'bg-orange-500/10', icon: Bed },
+                { id: 'drive', label: 'Rutas', color: 'text-purple-500', bg: 'bg-purple-500/10', icon: Car },
+                { id: 'activity', label: 'Actividades', color: 'text-teal-500', bg: 'bg-teal-500/10', icon: Camera },
+                { id: 'car_rental', label: 'Alquileres', color: 'text-sky-500', bg: 'bg-sky-500/10', icon: Key }
+              ].map(f => {
+                const Icon = f.icon;
+                const isActive = filters[f.id];
+                return (
+                  <button 
+                    key={f.id} 
+                    onClick={() => toggleFilter(f.id)}
+                    className={`flex items-center justify-between w-full px-3 py-2.5 rounded-xl transition-all ${isActive ? 'bg-slate-800' : 'hover:bg-slate-800/50'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-1.5 rounded-lg ${isActive ? f.bg : 'bg-slate-800'}`}>
+                        <Icon className={`w-4 h-4 ${isActive ? f.color : 'text-slate-500'}`} />
+                      </div>
+                      <span className={`text-sm font-semibold ${isActive ? 'text-white' : 'text-slate-400'}`}>{f.label}</span>
+                    </div>
+                    {isActive && <Check className={`w-4 h-4 ${f.color}`} />}
+                  </button>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <MapContainer center={defaultCenter} zoom={6} style={{ height: '100%', width: '100%', zIndex: 0 }}>
+      <MapContainer center={defaultCenter} zoom={defaultZoom} style={{ height: '100%', width: '100%', zIndex: 0 }}>
         <TileLayer
           attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
         
+        <MapEventsHandler tripId={trip?.id} />
         <LocationHandler setUserPos={setUserPos} setHasPermissionError={setHasPermissionError} />
         <CenterUserButton userPos={userPos} />
 

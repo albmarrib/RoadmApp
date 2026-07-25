@@ -30,28 +30,31 @@ export default function DocumentsPage() {
   }, [trip?.id, subscribeToDocuments]);
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const isFakeDriveFile = 
-      file.name.endsWith('.gdoc') || file.name.endsWith('.desktop') || 
-      file.name.endsWith('.url') || file.name.endsWith('.gsheet') ||
-      file.size === 0 || (!file.name.includes('.') && file.type === '');
-
-    if (isFakeDriveFile) {
-      alert(`Error con "${file.name}": El sistema nos indica que este archivo está vacío o es un enlace. Sube el documento real.`);
-      e.target.value = ''; 
-      return;
-    }
+    const files = Array.from(e.target.files);
+    if (!files || files.length === 0) return;
 
     setIsUploading(true);
-    try {
-      await addDocument(trip.id, file.name, file, activeTab);
-    } catch (err) {
-      alert("Error subiendo documento: " + err.message);
-    } finally {
-      setIsUploading(false);
+
+    for (const file of files) {
+      const isFakeDriveFile = 
+        file.name.endsWith('.gdoc') || file.name.endsWith('.desktop') || 
+        file.name.endsWith('.url') || file.name.endsWith('.gsheet') ||
+        file.size === 0 || (!file.name.includes('.') && file.type === '');
+
+      if (isFakeDriveFile) {
+        alert(`Error con "${file.name}": El sistema nos indica que este archivo está vacío o es un enlace. Sube el documento real.`);
+        continue;
+      }
+
+      try {
+        await addDocument(trip.id, file.name, file, activeTab);
+      } catch (err) {
+        alert(`Error subiendo "${file.name}": ` + err.message);
+      }
     }
+    
+    setIsUploading(false);
+    e.target.value = ''; 
   };
 
   const handleBatchAnalyze = async () => {
@@ -283,7 +286,7 @@ export default function DocumentsPage() {
         <label className="bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 border border-teal-500/30 font-bold py-2 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg cursor-pointer shrink-0">
           <UploadCloud className="w-4 h-4" />
           <span>{isUploading ? 'Subiendo...' : 'Subir Documento'}</span>
-          <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
+          <input type="file" multiple className="hidden" onChange={handleFileUpload} disabled={isUploading} />
         </label>
       </div>
 
@@ -332,38 +335,38 @@ export default function DocumentsPage() {
       {isLoading && documents.length === 0 ? (
         <div className="text-slate-400 text-center py-10 animate-pulse">Cargando documentos...</div>
       ) : filteredDocs.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filteredDocs.map((doc) => (
             <div 
               key={doc.id}
               onClick={() => { setViewerUrl(doc.url); setViewerName(doc.title); }}
-              className="bg-slate-900 border border-slate-700 hover:border-teal-500/50 rounded-2xl p-3 sm:p-4 flex flex-col justify-between cursor-pointer transition-colors group shadow-lg"
+              className="bg-slate-900 border border-slate-700 hover:border-teal-500/50 rounded-2xl p-3 flex items-center gap-3 cursor-pointer transition-colors group shadow-lg"
             >
-              <div className="flex flex-col items-center text-center gap-2">
-                <div className="p-3 bg-slate-800 rounded-xl text-teal-400 group-hover:bg-teal-500/20 transition-colors shrink-0">
-                  <FileText className="w-6 h-6" />
-                </div>
-                <div className="w-full min-w-0 flex flex-col items-center">
-                  <h3 className="font-semibold text-sm text-white truncate w-full" title={doc.title}>{doc.title}</h3>
-                  <p className="text-[10px] sm:text-xs text-slate-500 mt-1">
+              <div className="p-2.5 bg-slate-800 rounded-xl text-teal-400 group-hover:bg-teal-500/20 transition-colors shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              
+              <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <h3 className="font-semibold text-sm text-white truncate w-full" title={doc.title}>{doc.title}</h3>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-xs text-slate-500">
                     {doc.createdAt?.toDate ? format(doc.createdAt.toDate(), 'dd MMM yyyy') : 'Reciente'}
                   </p>
                   {doc.aiAnalyzed && (
-                    <span className="inline-block mt-2 text-[9px] sm:text-[10px] font-bold bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/30">
+                    <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30">
                       ✓ IA
                     </span>
                   )}
                 </div>
               </div>
-              <div className="flex justify-center items-center mt-3 pt-3 border-t border-slate-800/50">
-                <button
-                  onClick={(e) => handleDelete(doc.id, e)}
-                  className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                  title="Eliminar documento"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+
+              <button
+                onClick={(e) => handleDelete(doc.id, e)}
+                className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors shrink-0"
+                title="Eliminar documento"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           ))}
         </div>

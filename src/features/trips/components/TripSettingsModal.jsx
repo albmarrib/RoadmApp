@@ -14,6 +14,7 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
   
   const [formData, setFormData] = useState({
     title: '',
+    origin: '',
     destination: '',
     startDate: '',
     endDate: '',
@@ -37,6 +38,7 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
     if (isOpen && trip) {
       setFormData({
         title: trip.title || '',
+        origin: trip.origin || 'España',
         destination: trip.destination || '',
         startDate: trip.startDate ? format(trip.startDate.toDate(), 'yyyy-MM-dd') : '',
         endDate: trip.endDate ? format(trip.endDate.toDate(), 'yyyy-MM-dd') : '',
@@ -66,6 +68,7 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
     try {
       const updates = {
         title: formData.title,
+        origin: formData.origin,
         destination: formData.destination,
         coverImageUrl: formData.coverImageUrl,
         agencyName: formData.agencyName,
@@ -153,9 +156,16 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
             <section className="space-y-4">
               <h3 className="text-sm font-bold text-teal-400 uppercase tracking-wider border-b border-slate-800 pb-2">Información Principal</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-400 mb-1">Título del Viaje</label>
                   <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-teal-500" placeholder="Ej. Ruta por Japón" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Origen (Casa)</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                    <input type="text" value={formData.origin} onChange={e => setFormData({...formData, origin: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-teal-500" placeholder="Ej. España" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-1">Destino Principal</label>
@@ -164,18 +174,18 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
                     <input required type="text" value={formData.destination} onChange={e => setFormData({...formData, destination: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-teal-500" placeholder="Ej. Tokio, Kioto..." />
                   </div>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="block text-sm font-medium text-slate-400 mb-1">Fecha de Inicio</label>
-                  <div className="relative">
+                  <div className="relative min-w-0">
                     <Calendar className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
-                    <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-teal-500" />
+                    <input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} className="w-full min-w-0 bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-teal-500 appearance-none" />
                   </div>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="block text-sm font-medium text-slate-400 mb-1">Fecha de Fin</label>
-                  <div className="relative">
+                  <div className="relative min-w-0">
                     <Calendar className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
-                    <input type="date" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-teal-500" />
+                    <input type="date" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full min-w-0 bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-teal-500 appearance-none" />
                   </div>
                 </div>
                 <div className="md:col-span-2">

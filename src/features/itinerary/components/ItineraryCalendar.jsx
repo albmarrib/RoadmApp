@@ -148,7 +148,7 @@ export default function ItineraryCalendar({ nodes, trip, onNodeClick }) {
               
               <div className="overflow-y-auto hide-scrollbar flex-1 pr-1">
                 {selectedNodes.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-0">
                     {selectedNodes.map((node, index) => (
                       <TimelineNode 
                         key={node.id} 
