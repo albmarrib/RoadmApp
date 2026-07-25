@@ -31,12 +31,15 @@ export default function LoginPage() {
       className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/50 shadow-2xl"
     >
       <div className="flex justify-center mb-6">
-        <div className="w-16 h-16 bg-teal-500/20 rounded-2xl flex items-center justify-center border border-teal-500/30">
-          <Map className="w-8 h-8 text-teal-400" />
+        <div className="w-24 h-24 rounded-[28%] shadow-2xl shadow-teal-500/10 overflow-hidden shrink-0">
+          <img src="/logo.png" alt="Logo" className="w-full h-full object-cover scale-[1.20]" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+          <Map className="w-14 h-14 text-teal-400 m-auto mt-5 hidden" />
         </div>
       </div>
       
-      <h2 className="text-3xl font-bold text-center text-white mb-2">Bienvenido a RoadmApp</h2>
+      <h2 className="text-3xl font-bold text-center mb-2">
+        <span className="text-white">Bienvenido a Roadm</span><span className="text-blue-500">App</span>
+      </h2>
       <p className="text-slate-400 text-center mb-8">Inicia sesión para gestionar tus viajes.</p>
 
       {error && (

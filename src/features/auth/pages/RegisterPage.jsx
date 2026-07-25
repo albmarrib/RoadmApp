@@ -54,7 +54,9 @@ export default function RegisterPage() {
       className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/50 shadow-2xl"
     >
       <h2 className="text-3xl font-bold text-center text-white mb-2">Comienza tu viaje</h2>
-      <p className="text-slate-400 text-center mb-8">Crea una cuenta para acceder a RoadmApp.</p>
+      <p className="text-slate-400 text-center mb-8">
+        Crea una cuenta para acceder a <span className="text-white font-semibold">Roadm</span><span className="text-blue-500 font-semibold">App</span>.
+      </p>
 
       {error && (
         <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-xl mb-6 text-sm text-center">

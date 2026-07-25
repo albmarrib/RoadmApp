@@ -9,9 +9,14 @@ export default function AppLayout() {
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col md:flex-row">
       {/* Navbar/Sidebar */}
       <nav className="w-full md:w-64 bg-slate-950 border-b md:border-b-0 md:border-r border-slate-800 p-4 flex flex-row md:flex-col justify-between items-center md:items-start">
-        <div className="flex items-center gap-2">
-          <Map className="text-teal-400 w-8 h-8" />
-          <h1 className="text-xl font-bold tracking-tight text-white hidden md:block">RoadmApp</h1>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-[28%] overflow-hidden shrink-0 shadow-lg">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover scale-[1.20]" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+            <Map className="text-teal-400 w-12 h-12 hidden" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            <span className="text-white">Roadm</span><span className="text-blue-500">App</span>
+          </h1>
         </div>
         
         <div className="flex items-center gap-4 md:mt-auto">
