@@ -16,6 +16,8 @@ import DocumentsPage from './features/documents/pages/DocumentsPage';
 import PackingPage from './features/packing/pages/PackingPage';
 import ExpensesPage from './features/finances/pages/ExpensesPage';
 
+import UtilitiesPage from './features/utilities/pages/UtilitiesPage';
+
 export default function App() {
   const { initialize } = useAuthStore();
 
@@ -46,6 +48,7 @@ export default function App() {
             <Route path="documents" element={<DocumentsPage />} />
             <Route path="packing" element={<PackingPage />} />
             <Route path="expenses" element={<ExpensesPage />} />
+            <Route path="utilities" element={<UtilitiesPage />} />
           </Route>
         </Route>
 

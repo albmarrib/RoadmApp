@@ -147,3 +147,43 @@ exports.analyzeDocument = onCall(
     }
   }
 );
+
+// --- Función Ligera para Utilidades (Cámara de Precios y Menús) ---
+exports.analyzeImageUtility = onCall(
+  {
+    region: "europe-west1",
+    maxInstances: 10,
+    secrets: ["GEMINI_API_KEY"],
+  },
+  async (request) => {
+    if (!request.auth || !request.auth.uid) {
+      throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
+    }
+    const { fileUrl, mimeType, prompt } = request.data;
+    if (!fileUrl || !prompt) {
+      throw new HttpsError("invalid-argument", "Se requiere fileUrl y prompt.");
+    }
+
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      
+      const response = await fetch(fileUrl);
+      if (!response.ok) throw new Error("No se pudo descargar la imagen");
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64Data = buffer.toString("base64");
+
+      const aiResult = await model.generateContent([
+        prompt,
+        { inlineData: { data: base64Data, mimeType: mimeType || "image/jpeg" } },
+      ]);
+      
+      return { text: aiResult.response.text() };
+    } catch (error) {
+      console.error("Error en analyzeImageUtility:", error);
+      throw new HttpsError("internal", error.message);
+    }
+  }
+);

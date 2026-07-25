@@ -1,10 +1,11 @@
 import { Outlet, useParams, Link, useLocation } from 'react-router-dom';
-import { Map, CalendarDays, Luggage, Wallet, ArrowLeft, FileText, CloudDownload, Loader2, Settings, Printer } from 'lucide-react';
+import { Map, CalendarDays, Luggage, Wallet, ArrowLeft, FileText, CloudDownload, Loader2, Settings, Printer, Compass } from 'lucide-react';
 import { useTripStore } from '../store/tripStore';
 import { useAuthStore } from '../store/authStore';
 import { useEffect, useState } from 'react';
 import TripSettingsModal from '../features/trips/components/TripSettingsModal';
 import PrintableItinerary from '../features/itinerary/components/PrintableItinerary';
+import DualClock from '../features/utilities/components/DualClock';
 
 export default function TripLayout() {
   const { tripId } = useParams();
@@ -127,23 +128,35 @@ export default function TripLayout() {
     { id: 'documents', label: 'Docs', icon: FileText, path: `/trip/${tripId}/documents` },
     { id: 'packing', label: 'Equipaje', icon: Luggage, path: `/trip/${tripId}/packing` },
     { id: 'expenses', label: 'Gastos', icon: Wallet, path: `/trip/${tripId}/expenses` },
+    { id: 'utilities', label: 'Utilidades', icon: Compass, path: `/trip/${tripId}/utilities` },
   ];
 
   return (
     <>
     <div className="min-h-screen bg-slate-950 text-white print:hidden">
-      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="flex items-center h-16 gap-4">
-            <Link to="/" className="p-2 -ml-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            
-            <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-bold text-white truncate">{trip.title}</h1>
-              <p className="text-xs text-teal-400 truncate">{trip.destination}</p>
-            </div>
+      <header className="h-16 bg-slate-900 border-b border-slate-800 sticky top-0 z-50 overflow-hidden">
+        
+        {/* FONDO MARCA DE AGUA (Texto cortado por JS para evitar desbordamiento físico) */}
+        <div className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-0 px-2 text-center overflow-hidden" style={{ width: '100%' }}>
+          <h1 className="text-4xl sm:text-5xl font-black text-slate-700/60 uppercase tracking-widest leading-none whitespace-nowrap">
+            {trip.title.length > 15 ? trip.title.substring(0, 15) + '...' : trip.title}
+          </h1>
+        </div>
 
+        <div className="max-w-5xl mx-auto px-2 sm:px-4 h-full flex items-center justify-between relative z-10">
+          
+          {/* LADO IZQUIERDO: Botón Volver */}
+          <Link to="/" className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors flex-shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          
+          {/* CENTRO: Reloj Dual (Protagonista) */}
+          <div className="flex-1 flex justify-center px-2">
+            <DualClock destination={trip.destination} />
+          </div>
+
+          {/* LADO DERECHO: Iconos de acción */}
+          <div className="flex items-center gap-1 flex-shrink-0">
             <button 
               onClick={() => window.print()}
               className="p-2 text-slate-400 hover:text-teal-400 hover:bg-slate-800 rounded-full transition-colors"
@@ -151,7 +164,6 @@ export default function TripLayout() {
             >
               <Printer className="w-5 h-5" />
             </button>
-
             <button 
               onClick={() => setIsSettingsOpen(true)}
               className="p-2 text-slate-400 hover:text-teal-400 hover:bg-slate-800 rounded-full transition-colors"
@@ -159,15 +171,13 @@ export default function TripLayout() {
             >
               <Settings className="w-5 h-5" />
             </button>
-
             <button 
               onClick={handleSyncOffline}
               disabled={isSyncing}
-              className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"
+              className="p-2 text-slate-400 hover:text-teal-400 hover:bg-slate-800 rounded-full transition-colors disabled:opacity-50"
               title="Guardar documentos para usarlos sin Internet"
             >
-              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudDownload className="w-4 h-4" />}
-              <span className="hidden sm:inline">{isSyncing ? 'Guardando...' : 'Sincronizar Offline'}</span>
+              {isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CloudDownload className="w-5 h-5" />}
             </button>
           </div>
           
