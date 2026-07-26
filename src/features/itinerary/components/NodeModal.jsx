@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import DocumentViewer from '../../../components/ui/DocumentViewer';
 
 export default function NodeModal({ tripId, isOpen, onClose, editingNode = null }) {
-  const { addNode, updateNode, deleteNode } = useItineraryStore();
+  const { addNode, updateNode, deleteNode, nodes } = useItineraryStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -180,9 +180,14 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         const distanceKm = (dataOsrm.routes[0].distance / 1000).toFixed(1);
         
         let newCost = formData.cost;
-        if (formData.routeMode === 'driving' && formData.fuelConsumption && formData.fuelPrice) {
-          const cost = (distanceKm * (parseFloat(formData.fuelConsumption) / 100)) * parseFloat(formData.fuelPrice);
-          newCost = cost.toFixed(2);
+        if (formData.routeMode === 'driving') {
+          const carRental = nodes.find(n => n.type === 'car_rental' && n.fuelConsumption && n.fuelPrice);
+          const fC = formData.type === 'car_rental' ? formData.fuelConsumption : carRental?.fuelConsumption;
+          const fP = formData.type === 'car_rental' ? formData.fuelPrice : carRental?.fuelPrice;
+          if (fC && fP) {
+            const cost = (distanceKm * (parseFloat(fC) / 100)) * parseFloat(fP);
+            newCost = cost.toFixed(2);
+          }
         }
         
         setFormData(prev => ({
@@ -264,8 +269,8 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         routeDestination: formData.routeDestination,
         routeMode: formData.routeMode,
         routeDistanceKm: formData.routeDistanceKm,
-        fuelConsumption: formData.fuelConsumption,
-        fuelPrice: formData.fuelPrice
+        fuelConsumption: formData.type === 'car_rental' ? formData.fuelConsumption : '',
+        fuelPrice: formData.type === 'car_rental' ? formData.fuelPrice : ''
       };
 
       if (editingNode) {
@@ -427,18 +432,7 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
                   </button>
                 </div>
 
-                {formData.routeMode === 'driving' && (
-                  <div className="grid grid-cols-2 gap-4 mt-2 pt-4 border-t border-indigo-500/20">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Consumo (L/100km)</label>
-                      <input type="number" step="0.1" value={formData.fuelConsumption} onChange={e => setFormData({...formData, fuelConsumption: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="Ej. 7.5" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Precio Gasolina (€/L)</label>
-                      <input type="number" step="0.01" value={formData.fuelPrice} onChange={e => setFormData({...formData, fuelPrice: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500" placeholder="Ej. 1.60" />
-                    </div>
-                  </div>
-                )}
+                {/* Los campos de consumo han sido eliminados de aquí. Se leen automáticamente del coche de alquiler en los cálculos */}
               </div>
             )}
 

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { usePackingStore } from '../../../store/packingStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Luggage, Check, Plus, Trash2, ChevronDown, ChevronUp, ScanBarcode, X, Camera, Eye } from 'lucide-react';
+import { Luggage, Check, Plus, Trash2, ChevronDown, ChevronUp, ScanBarcode, X, Camera, Eye, Compass, MapPin } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 export default function PackingPage() {
@@ -23,6 +23,9 @@ export default function PackingPage() {
   const [luggagePhotoPreview, setLuggagePhotoPreview] = useState(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isTagDetailsModalOpen, setIsTagDetailsModalOpen] = useState(false);
+  const [trackerType, setTrackerType] = useState('none');
+  const [trackerId, setTrackerId] = useState('');
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
 
   // View Card State
   const [selectedTag, setSelectedTag] = useState(null);
@@ -133,13 +136,17 @@ export default function PackingPage() {
         suitcaseName: suitcaseName.trim() || 'Maleta',
         flightLeg: flightLeg.trim(),
         scannedCode: scannedCode,
-        photoUrl: photoUrl
+        photoUrl: photoUrl,
+        trackerType: trackerType !== 'none' ? trackerType : null,
+        trackerId: trackerId.trim() || null
       });
       
       setIsTagDetailsModalOpen(false);
       setScannedCode('');
       setLuggagePhotoFile(null);
       setLuggagePhotoPreview(null);
+      setTrackerType('none');
+      setTrackerId('');
     } catch (err) {
       alert("Error al guardar la etiqueta.");
     } finally {
@@ -167,39 +174,11 @@ export default function PackingPage() {
           <div>
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
               <Luggage className="text-teal-400" />
-              Equipaje
+              Preparación y Rastreo de Equipaje
             </h2>
             <p className="text-slate-400 text-sm">
               Tu lista de imprescindibles para {trip.destination}
             </p>
-          </div>
-          
-          <div className="flex items-center gap-4 bg-slate-950/50 p-4 rounded-2xl border border-slate-800">
-            <div className="relative w-16 h-16 flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <path
-                  className="text-slate-800"
-                  strokeWidth="3"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  className="text-teal-500 drop-shadow-md"
-                  strokeDasharray={`${progress}, 100`}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-              <div className="absolute text-sm font-bold text-white">{progress}%</div>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{packedItems} <span className="text-sm font-normal text-slate-500">/ {totalItems}</span></p>
-              <p className="text-xs text-teal-400 font-medium uppercase tracking-wider">Guardados</p>
-            </div>
           </div>
         </div>
       </div>
@@ -207,18 +186,62 @@ export default function PackingPage() {
       {/* Botones de Acción Principales */}
       <div className="flex gap-3">
         <button 
+          onClick={() => setIsScanning(true)}
+          className="flex-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 p-3 rounded-2xl flex flex-col items-center justify-center gap-2 font-bold transition-colors text-sm text-center"
+        >
+          <ScanBarcode size={24} strokeWidth={2} />
+          Escanear Maleta / Tag
+        </button>
+        <button 
+          onClick={() => setIsTrackingModalOpen(true)}
+          className="flex-1 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 p-3 rounded-2xl flex flex-col items-center justify-center gap-2 font-bold transition-colors text-sm text-center"
+        >
+          <Compass size={24} strokeWidth={2} />
+          Rastreo por Tags Externos
+        </button>
+      </div>
+
+      {/* Checklist Equipaje Title and Progress */}
+      <div className="flex items-center justify-between mt-8 mb-4">
+        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+          CheckList Equipaje
+        </h3>
+        
+        <div className="flex items-center gap-3 bg-slate-900/50 px-3 py-1.5 rounded-xl border border-slate-800">
+          <div className="relative w-8 h-8 flex items-center justify-center">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path
+                className="text-slate-800"
+                strokeWidth="4"
+                stroke="currentColor"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                className="text-teal-500 drop-shadow-md"
+                strokeDasharray={`${progress}, 100`}
+                strokeWidth="4"
+                strokeLinecap="round"
+                stroke="currentColor"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-bold text-white leading-none">{packedItems} <span className="text-xs font-normal text-slate-500">/ {totalItems}</span></p>
+            <p className="text-[10px] text-teal-400 font-medium uppercase tracking-wider">Guardados</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <button 
           onClick={() => { setNewItemCategory(''); setNewItemName(''); setIsAdding(true); }}
-          className="flex-1 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
+          className="w-full bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
         >
           <Plus size={20} strokeWidth={3} />
           Nueva Categoría
-        </button>
-        <button 
-          onClick={() => setIsScanning(true)}
-          className="flex-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
-        >
-          <ScanBarcode size={20} strokeWidth={3} />
-          Escanear Etiqueta de Maletas
         </button>
       </div>
 
@@ -453,6 +476,33 @@ export default function PackingPage() {
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col justify-end">
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 truncate" title="Tag Externo">Tipo de Tag</label>
+                    <select 
+                      value={trackerType}
+                      onChange={e => setTrackerType(e.target.value)}
+                      className="w-full h-[48px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none"
+                    >
+                      <option value="none">Ninguno</option>
+                      <option value="apple">Apple AirTag</option>
+                      <option value="samsung">SmartTag</option>
+                      <option value="tile">Tile</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 truncate">Nombre del Tag</label>
+                    <input 
+                      type="text" 
+                      value={trackerId}
+                      onChange={e => setTrackerId(e.target.value)}
+                      disabled={trackerType === 'none'}
+                      placeholder="Ej. AirTag Rojo"
+                      className="w-full h-[48px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-white focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Foto de la maleta (Opcional)</label>
                   {!luggagePhotoPreview ? (
@@ -484,7 +534,7 @@ export default function PackingPage() {
                 <div className="flex gap-3 pt-4">
                   <button 
                     type="button" 
-                    onClick={() => { setIsTagDetailsModalOpen(false); setScannedCode(''); setLuggagePhotoFile(null); setLuggagePhotoPreview(null); }}
+                    onClick={() => { setIsTagDetailsModalOpen(false); setScannedCode(''); setLuggagePhotoFile(null); setLuggagePhotoPreview(null); setTrackerType('none'); setTrackerId(''); }}
                     className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors"
                     disabled={isUploadingPhoto}
                   >
@@ -551,7 +601,76 @@ export default function PackingPage() {
                       <p className="font-medium text-slate-900">{selectedTag.flightLeg}</p>
                     </div>
                   )}
+
+                  {selectedTag.trackerType && (
+                    <div className="bg-sky-50 p-4 rounded-2xl border border-sky-100">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-sky-600 uppercase tracking-wider mb-1">
+                            Localizador {selectedTag.trackerType === 'apple' ? 'AirTag' : selectedTag.trackerType === 'samsung' ? 'SmartTag' : 'Tile'}
+                          </p>
+                          <p className="font-medium text-slate-900">{selectedTag.trackerId || 'Registrado'}</p>
+                        </div>
+                        <a 
+                          href={selectedTag.trackerType === 'apple' ? 'findmy://' : selectedTag.trackerType === 'samsung' ? 'smartthings://' : 'tile://'} 
+                          className="bg-sky-500 hover:bg-sky-600 text-white p-2 rounded-xl transition-colors flex items-center justify-center"
+                        >
+                          <Compass size={20} />
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Tracking Options Modal */}
+        {isTrackingModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-900 rounded-[2rem] w-full max-w-sm border border-sky-500/30 overflow-hidden shadow-2xl relative"
+            >
+              <div className="p-6 pb-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
+                <h3 className="font-bold text-white flex items-center gap-2">
+                  <Compass className="text-sky-400" /> Rastreo Externo
+                </h3>
+                <button onClick={() => setIsTrackingModalOpen(false)} className="p-2 text-slate-400 hover:text-white rounded-full transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                {items.filter(i => i.trackerType && i.trackerType !== 'none').length > 0 ? (
+                  items.filter(i => i.trackerType && i.trackerType !== 'none').map(item => (
+                    <div key={item.id} className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center justify-between gap-4">
+                      <div className="flex-1 overflow-hidden">
+                        <p className="font-medium text-white truncate">{item.suitcaseName || 'Equipaje'}</p>
+                        <p className="text-xs text-sky-400 mt-1 flex items-center gap-1 truncate">
+                          <MapPin size={12} className="shrink-0" />
+                          <span className="truncate">{item.trackerType === 'apple' ? 'AirTag' : item.trackerType === 'samsung' ? 'SmartTag' : 'Tile'}{item.trackerId ? ` - ${item.trackerId}` : ''}</span>
+                        </p>
+                      </div>
+                      <a 
+                        href={item.trackerType === 'apple' ? 'findmy://' : item.trackerType === 'samsung' ? 'smartthings://' : 'tile://'} 
+                        onClick={() => setIsTrackingModalOpen(false)}
+                        className="bg-sky-500 hover:bg-sky-400 text-slate-900 p-3 rounded-xl font-bold transition-colors shrink-0"
+                      >
+                        <Compass size={20} />
+                      </a>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Compass size={48} className="mx-auto text-slate-700 mb-4 opacity-50" />
+                    <p className="text-slate-400 font-medium">No hay maletas con localizador registrado.</p>
+                    <p className="text-sm text-slate-500 mt-2">Añade un localizador al escanear una etiqueta.</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
