@@ -67,10 +67,20 @@ export default function LiveTranslator() {
     }
   };
 
-  const startListening = (langCode, direction) => {
+  const startListening = async (langCode, direction) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Tu navegador no soporta reconocimiento de voz nativo.");
+      alert("Tu navegador no soporta reconocimiento de voz nativo. Si estás en iOS, asegúrate de usar Safari.");
+      return;
+    }
+
+    // Solicitar permiso de micrófono explícitamente (soluciona bloqueos en iOS)
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+    } catch (err) {
+      alert("Permiso de micrófono denegado. Por favor, permítelo en los ajustes del navegador y recarga la página.");
       return;
     }
 
@@ -111,6 +121,9 @@ export default function LiveTranslator() {
     
     recognition.onerror = (event) => {
       console.error("Speech recognition error", event.error);
+      if (event.error === 'not-allowed') {
+        alert("El micrófono está bloqueado por el navegador. Revisa los permisos.");
+      }
       setActiveMic(null);
     };
     

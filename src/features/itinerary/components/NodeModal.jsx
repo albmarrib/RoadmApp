@@ -30,7 +30,8 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
     routeMode: 'driving',
     routeDistanceKm: '',
     fuelConsumption: '',
-    fuelPrice: ''
+    fuelPrice: '',
+    isPaid: true
   });
   const [newFiles, setNewFiles] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
@@ -69,7 +70,8 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         routeMode: editingNode.routeMode || 'driving',
         routeDistanceKm: editingNode.routeDistanceKm || '',
         fuelConsumption: editingNode.fuelConsumption || '',
-        fuelPrice: editingNode.fuelPrice || ''
+        fuelPrice: editingNode.fuelPrice || '',
+        isPaid: editingNode.isPaid !== false // por defecto true
       });
       setExistingAttachments(editingNode.attachments || []);
       setNewFiles([]);
@@ -92,7 +94,8 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         type: 'activity', title: '', startDate: '', startTime: '', endDate: '', endTime: '', 
         cost: '', currency: 'EUR', notes: '', externalUrl: '',
         contactPhone: '', contactWhatsapp: '', contactEmail: '', contactName: '',
-        routeOrigin: '', routeDestination: '', routeMode: 'driving', routeDistanceKm: '', fuelConsumption: '', fuelPrice: ''
+        routeOrigin: '', routeDestination: '', routeMode: 'driving', routeDistanceKm: '', fuelConsumption: '', fuelPrice: '',
+        isPaid: true
       });
       setExistingAttachments([]);
       setNewFiles([]);
@@ -259,6 +262,7 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         externalUrl: formData.externalUrl,
         location: selectedLocation,
         dropoffLocation: selectedDropoffLocation,
+        isPaid: formData.isPaid,
         // Contactos
         contactPhone: formData.contactPhone,
         contactWhatsapp: formData.contactWhatsapp,
@@ -643,6 +647,25 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500" 
                   placeholder="0.00" 
                 />
+              </div>
+              <div className="sm:w-1/3">
+                <label className="block text-sm font-medium text-slate-400 mb-1">Estado de pago</label>
+                <div className="flex bg-slate-950 rounded-xl p-1 border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, isPaid: true })}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${formData.isPaid ? 'bg-teal-500/20 text-teal-400' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    Pagado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, isPaid: false })}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${!formData.isPaid ? 'bg-amber-500/20 text-amber-400' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                    Pendiente
+                  </button>
+                </div>
               </div>
             </div>
 

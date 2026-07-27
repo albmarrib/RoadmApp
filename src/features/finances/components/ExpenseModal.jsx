@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Calendar as CalendarIcon, Upload, Trash2 } from 'lucide-react';
+import { X, Save, Calendar as CalendarIcon, Upload, Trash2, Sparkles } from 'lucide-react';
 import { useExpenseStore } from '../../../store/expenseStore';
 import { Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { useCameraAI } from '../../utilities/hooks/useCameraAI';
 
 export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) {
   const { addExpense, updateExpense, deleteExpense, isLoading } = useExpenseStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
+  const { processImage, isProcessing: isAIProcessing } = useCameraAI();
   
   // Default values
   const defaultCategories = trip?.categories || ['Comida', 'Transporte', 'Ocio', 'Alojamiento', 'Vuelos', 'Gasolina', 'Supermercado', 'Otros'];
@@ -17,6 +19,7 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
   const [formData, setFormData] = useState({
     title: '',
     amount: '',
+    localAmount: '',
     date: format(new Date(), 'yyyy-MM-dd'),
     category: defaultCategories[0] || 'Otros',
     paidBy: members[0] || '',
@@ -29,6 +32,7 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
         setFormData({
           title: editingExpense.title || '',
           amount: editingExpense.amount || '',
+          localAmount: editingExpense.amount && trip?.exchangeRate ? (parseFloat(editingExpense.amount) * trip.exchangeRate).toFixed(2) : '',
           date: editingExpense.date ? format(editingExpense.date.toDate(), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
           category: editingExpense.category || defaultCategories[0],
           paidBy: editingExpense.paidBy || (members[0] || ''),
@@ -38,6 +42,7 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
         setFormData({
           title: '',
           amount: '',
+          localAmount: '',
           date: format(new Date(), 'yyyy-MM-dd'),
           category: defaultCategories[0] || 'Otros',
           paidBy: members[0] || '',
@@ -66,6 +71,53 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
 
   const handleSelectAllMembers = () => {
     setFormData({ ...formData, splitBetween: members.slice() });
+  };
+
+  const handleAIAnalyze = async () => {
+    if (!receiptFile) return;
+    try {
+      const prompt = `Analiza este ticket de compra/gasto. Extrae la siguiente información estrictamente en JSON:
+      {
+        "title": "Concepto o nombre del establecimiento (ej: Cena en Restaurante X)",
+        "amount": "Cantidad total en formato numérico (ej: 45.50). EXTRAE SIEMPRE LA CANTIDAD ORIGINAL IMPRESA EN EL TICKET.",
+        "currency": "La moneda en la que está el ticket (ej: EUR, USD, NZD)",
+        "date": "Fecha en formato YYYY-MM-DD si aparece, sino null",
+        "category": "Elige la más adecuada de esta lista: Comida, Transporte, Ocio, Alojamiento, Vuelos, Gasolina, Supermercado, Otros"
+      }`;
+      const aiResponse = await processImage(receiptFile, prompt, true);
+      const cleanJson = aiResponse.replace(/```json/gi, '').replace(/```/gi, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      
+      const isBaseCurrency = parsed.currency?.toUpperCase() === (trip?.currency || 'EUR').toUpperCase();
+      
+      setFormData(prev => {
+        let baseAmt = prev.amount;
+        let localAmt = prev.localAmount;
+        
+        if (parsed.amount) {
+          if (!isBaseCurrency && trip?.exchangeRate) {
+            localAmt = String(parsed.amount);
+            baseAmt = (parseFloat(parsed.amount) / trip.exchangeRate).toFixed(2);
+          } else {
+            baseAmt = String(parsed.amount);
+            if (trip?.exchangeRate) {
+              localAmt = (parseFloat(parsed.amount) * trip.exchangeRate).toFixed(2);
+            }
+          }
+        }
+        
+        return {
+          ...prev,
+          title: parsed.title || prev.title,
+          amount: baseAmt,
+          localAmount: localAmt,
+          date: parsed.date || prev.date,
+          category: defaultCategories.includes(parsed.category) ? parsed.category : prev.category
+        };
+      });
+    } catch(err) {
+      alert("Error analizando con IA: " + err.message);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -133,6 +185,41 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
           
           <form onSubmit={handleSubmit} className="space-y-6">
             
+            {/* 0. Ticket / Adjunto (MOVIDO ARRIBA) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-1">Foto del Ticket</label>
+              <div className="relative border-2 border-dashed border-slate-700 rounded-xl p-4 text-center hover:border-slate-500 transition-colors bg-slate-950/50">
+                <input 
+                  type="file" 
+                  accept="image/*,.pdf" 
+                  onChange={(e) => setReceiptFile(e.target.files[0])} 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="flex flex-col items-center justify-center text-slate-500">
+                  <Upload className="w-6 h-6 mb-2" />
+                  <span className="text-sm">
+                    {receiptFile ? receiptFile.name : (editingExpense?.receiptUrl ? 'Cambiar ticket existente' : 'Toca para subir un ticket')}
+                  </span>
+                </div>
+              </div>
+              {receiptFile && (
+                <button
+                  type="button"
+                  onClick={handleAIAnalyze}
+                  disabled={isAIProcessing}
+                  className="w-full mt-3 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30 hover:border-indigo-500/50 p-3 rounded-xl transition-colors flex items-center justify-center gap-2 font-bold shadow-lg"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  {isAIProcessing ? 'Analizando con IA...' : 'Autocompletar con IA'}
+                </button>
+              )}
+              {editingExpense?.receiptUrl && !receiptFile && (
+                <a href={editingExpense.receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-teal-400 mt-2 inline-block hover:underline">
+                  Ver ticket guardado
+                </a>
+              )}
+            </div>
+
             {/* 1. Datos Básicos */}
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -147,10 +234,11 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
                       <label className="block text-sm font-medium text-teal-400 mb-1">Importe Local</label>
                       <input 
                         type="number" min="0" step="0.01" 
+                        value={formData.localAmount}
                         onChange={e => {
                           const localVal = parseFloat(e.target.value) || 0;
                           const baseVal = (localVal / trip.exchangeRate).toFixed(2);
-                          setFormData({...formData, amount: baseVal});
+                          setFormData({...formData, localAmount: e.target.value, amount: baseVal});
                         }} 
                         className="w-full bg-slate-950 border border-teal-500/50 rounded-xl px-4 py-3 text-white font-bold text-xl focus:outline-none focus:border-teal-500" 
                         placeholder="Moneda local" 
@@ -161,7 +249,11 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
                       <input 
                         required type="number" min="0" step="0.01" 
                         value={formData.amount} 
-                        onChange={e => setFormData({...formData, amount: e.target.value})} 
+                        onChange={e => {
+                          const baseVal = parseFloat(e.target.value) || 0;
+                          const localVal = (baseVal * trip.exchangeRate).toFixed(2);
+                          setFormData({...formData, amount: e.target.value, localAmount: localVal});
+                        }} 
                         className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-300 font-bold text-xl focus:outline-none focus:border-slate-500" 
                         placeholder="0.00" 
                       />
@@ -249,30 +341,6 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
                 </div>
               </div>
             )}
-
-            {/* 3. Ticket / Adjunto */}
-            <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Foto del Ticket</label>
-              <div className="relative border-2 border-dashed border-slate-700 rounded-xl p-4 text-center hover:border-slate-500 transition-colors bg-slate-950/50">
-                <input 
-                  type="file" 
-                  accept="image/*,.pdf" 
-                  onChange={(e) => setReceiptFile(e.target.files[0])} 
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <div className="flex flex-col items-center justify-center text-slate-500">
-                  <Upload className="w-6 h-6 mb-2" />
-                  <span className="text-sm">
-                    {receiptFile ? receiptFile.name : (editingExpense?.receiptUrl ? 'Cambiar ticket existente' : 'Toca para subir un ticket')}
-                  </span>
-                </div>
-              </div>
-              {editingExpense?.receiptUrl && !receiptFile && (
-                <a href={editingExpense.receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-teal-400 mt-2 inline-block hover:underline">
-                  Ver ticket guardado
-                </a>
-              )}
-            </div>
 
             <div className="flex gap-3 pt-4 border-t border-slate-800">
               {editingExpense && (

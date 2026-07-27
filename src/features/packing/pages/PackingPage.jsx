@@ -7,7 +7,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 
 export default function PackingPage() {
   const { trip } = useOutletContext();
-  const { items, subscribeToPacking, toggleItem, deleteItem, addItem, deleteCategory, isLoading } = usePackingStore();
+  const { items, subscribeToPacking, toggleItem, deleteItem, addItem, deleteCategory, updateItem, isLoading } = usePackingStore();
   
   const [expandedCategories, setExpandedCategories] = useState({});
   const [isAdding, setIsAdding] = useState(false);
@@ -26,6 +26,19 @@ export default function PackingPage() {
   const [trackerType, setTrackerType] = useState('none');
   const [trackerId, setTrackerId] = useState('');
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('checklist'); // 'checklist' | 'luggage'
+  const [editingLuggageId, setEditingLuggageId] = useState(null);
+
+  const handleStartScan = async () => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      }
+      setIsScanning(true);
+    } catch (err) {
+      alert("Permiso de cámara denegado. Por favor, permítelo en los ajustes de Safari/Chrome y recarga la página.");
+    }
+  };
 
   // View Card State
   const [selectedTag, setSelectedTag] = useState(null);
@@ -86,9 +99,9 @@ export default function PackingPage() {
     setIsAdding(true);
   };
 
-  const categories = useMemo(() => {
+  const checklistCategories = useMemo(() => {
     const cats = {};
-    items.forEach(item => {
+    items.filter(item => item.category !== 'ETIQUETAS FACTURACIÓN').forEach(item => {
       if (!cats[item.category]) {
         cats[item.category] = [];
       }
@@ -97,9 +110,13 @@ export default function PackingPage() {
     return cats;
   }, [items]);
 
-  const totalItems = items.length;
-  const packedItems = items.filter(i => i.packed).length;
-  const progress = totalItems === 0 ? 0 : Math.round((packedItems / totalItems) * 100);
+  const luggageItems = useMemo(() => {
+    return items.filter(item => item.category === 'ETIQUETAS FACTURACIÓN');
+  }, [items]);
+
+  const totalChecklistItems = items.filter(item => item.category !== 'ETIQUETAS FACTURACIÓN').length;
+  const packedChecklistItems = items.filter(item => item.category !== 'ETIQUETAS FACTURACIÓN' && item.packed).length;
+  const progress = totalChecklistItems === 0 ? 0 : Math.round((packedChecklistItems / totalChecklistItems) * 100);
 
   const handleAddItem = async (e) => {
     e.preventDefault();
@@ -125,12 +142,12 @@ export default function PackingPage() {
         ? `Etiqueta: ${scannedCode} (${flightLeg})`
         : `Etiqueta: ${scannedCode}`;
         
-      let photoUrl = null;
+      let photoUrl = editingLuggageId ? selectedTag?.photoUrl : null;
       if (luggagePhotoFile) {
         photoUrl = await usePackingStore.getState().uploadLuggagePhoto(trip.id, luggagePhotoFile);
       }
         
-      await addItem(trip.id, { 
+      const itemData = {
         name: tagName, 
         category: 'ETIQUETAS FACTURACIÓN',
         suitcaseName: suitcaseName.trim() || 'Maleta',
@@ -139,7 +156,13 @@ export default function PackingPage() {
         photoUrl: photoUrl,
         trackerType: trackerType !== 'none' ? trackerType : null,
         trackerId: trackerId.trim() || null
-      });
+      };
+
+      if (editingLuggageId) {
+        await updateItem(trip.id, editingLuggageId, itemData);
+      } else {
+        await addItem(trip.id, itemData);
+      }
       
       setIsTagDetailsModalOpen(false);
       setScannedCode('');
@@ -147,6 +170,8 @@ export default function PackingPage() {
       setLuggagePhotoPreview(null);
       setTrackerType('none');
       setTrackerId('');
+      setEditingLuggageId(null);
+      setSelectedTag(null);
     } catch (err) {
       alert("Error al guardar la etiqueta.");
     } finally {
@@ -154,7 +179,7 @@ export default function PackingPage() {
     }
   };
 
-  if (isLoading && totalItems === 0) {
+  if (isLoading && items.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-pulse flex flex-col items-center">
@@ -168,25 +193,23 @@ export default function PackingPage() {
   return (
     <div className="space-y-6 pb-24">
       {/* Dashboard Superior */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-              <Luggage className="text-teal-400" />
-              Preparación y Rastreo de Equipaje
-            </h2>
-            <p className="text-slate-400 text-sm">
-              Tu lista de imprescindibles para {trip.destination}
-            </p>
-          </div>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500/10 rounded-full blur-3xl -mr-8 -mt-8"></div>
+        <div className="relative z-10">
+          <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+            <Luggage className="text-teal-400 w-5 h-5" />
+            Equipaje y Rastreo
+          </h2>
+          <p className="text-slate-400 text-xs">
+            Destino: {trip.destination}
+          </p>
         </div>
       </div>
 
       {/* Botones de Acción Principales */}
       <div className="flex gap-3">
         <button 
-          onClick={() => setIsScanning(true)}
+          onClick={handleStartScan}
           className="flex-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 p-3 rounded-2xl flex flex-col items-center justify-center gap-2 font-bold transition-colors text-sm text-center"
         >
           <ScanBarcode size={24} strokeWidth={2} />
@@ -201,165 +224,210 @@ export default function PackingPage() {
         </button>
       </div>
 
-      {/* Checklist Equipaje Title and Progress */}
-      <div className="flex items-center justify-between mt-8 mb-4">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2">
-          CheckList Equipaje
-        </h3>
-        
-        <div className="flex items-center gap-3 bg-slate-900/50 px-3 py-1.5 rounded-xl border border-slate-800">
-          <div className="relative w-8 h-8 flex items-center justify-center">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-slate-800"
-                strokeWidth="4"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-teal-500 drop-shadow-md"
-                strokeDasharray={`${progress}, 100`}
-                strokeWidth="4"
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-            </svg>
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-bold text-white leading-none">{packedItems} <span className="text-xs font-normal text-slate-500">/ {totalItems}</span></p>
-            <p className="text-[10px] text-teal-400 font-medium uppercase tracking-wider">Guardados</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <button 
-          onClick={() => { setNewItemCategory(''); setNewItemName(''); setIsAdding(true); }}
-          className="w-full bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
+      {/* Tabs */}
+      <div className="flex bg-slate-900 rounded-2xl p-1 mb-6 border border-slate-800">
+        <button
+          onClick={() => setActiveTab('checklist')}
+          className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${activeTab === 'checklist' ? 'bg-teal-500/10 text-teal-400 shadow-sm border border-teal-500/20' : 'text-slate-400 hover:text-white'}`}
         >
-          <Plus size={20} strokeWidth={3} />
-          Nueva Categoría
+          Checklist
+        </button>
+        <button
+          onClick={() => setActiveTab('luggage')}
+          className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${activeTab === 'luggage' ? 'bg-indigo-500/10 text-indigo-400 shadow-sm border border-indigo-500/20' : 'text-slate-400 hover:text-white'}`}
+        >
+          Mis Maletas
         </button>
       </div>
 
-      {/* Lista por Categorías */}
-      <div className="space-y-3">
-        {Object.entries(categories).map(([category, catItems]) => {
-          const isExpanded = expandedCategories[category] !== false;
-          const packedInCategory = catItems.filter(i => i.packed).length;
-          const isAllPacked = packedInCategory === catItems.length && catItems.length > 0;
+      {activeTab === 'checklist' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+          {/* Checklist Equipaje Title and Progress */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              Progreso
+            </h3>
+            
+            <div className="flex items-center gap-3 bg-slate-900/50 px-3 py-1.5 rounded-xl border border-slate-800">
+              <div className="relative w-8 h-8 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <path
+                    className="text-slate-800"
+                    strokeWidth="4"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <path
+                    className="text-teal-500 drop-shadow-md"
+                    strokeDasharray={`${progress}, 100`}
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                </svg>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-white leading-none">{packedChecklistItems} <span className="text-xs font-normal text-slate-500">/ {totalChecklistItems}</span></p>
+                <p className="text-[10px] text-teal-400 font-medium uppercase tracking-wider">Guardados</p>
+              </div>
+            </div>
+          </div>
 
-          return (
-            <motion.div 
-              key={category}
-              layout
-              className={`bg-slate-900 border rounded-xl overflow-hidden transition-colors ${isAllPacked ? 'border-teal-500/30' : 'border-slate-800'}`}
+          <div className="mb-4">
+            <button 
+              onClick={() => { setNewItemCategory(''); setNewItemName(''); setIsAdding(true); }}
+              className="w-full bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
             >
-              <button 
-                onClick={() => toggleCategory(category)}
-                className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-900/50 hover:bg-slate-800 transition-colors group"
-              >
-                <div className="flex items-center gap-2">
-                  <h3 className={`text-sm font-bold ${isAllPacked ? 'text-teal-400' : 'text-white'}`}>{category}</h3>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-950 rounded text-slate-400">
-                    {packedInCategory} / {catItems.length}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div 
-                    onClick={(e) => handleQuickAdd(e, category)}
-                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 bg-slate-800 hover:bg-teal-500/20 text-slate-400 hover:text-teal-400 rounded-lg transition-all"
-                    title={`Añadir a ${category}`}
-                  >
-                    <Plus size={14} strokeWidth={3} />
-                  </div>
-                  <div 
-                    onClick={(e) => handleDeleteCategory(e, category)}
-                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-all"
-                    title={`Borrar categoría ${category}`}
-                  >
-                    <Trash2 size={14} />
-                  </div>
-                  {isExpanded ? <ChevronUp className="text-slate-500 w-4 h-4 ml-1" /> : <ChevronDown className="text-slate-500 w-4 h-4 ml-1" />}
-                </div>
-              </button>
+              <Plus size={20} strokeWidth={3} />
+              Nueva Categoría
+            </button>
+          </div>
 
-              <AnimatePresence>
-                {isExpanded && (
-                  <motion.div 
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="border-t border-slate-800/50 divide-y divide-slate-800/50"
+          {/* Lista por Categorías */}
+          <div className="space-y-3">
+            {Object.entries(checklistCategories).map(([category, catItems]) => {
+              const isExpanded = expandedCategories[category] !== false;
+              const packedInCategory = catItems.filter(i => i.packed).length;
+              const isAllPacked = packedInCategory === catItems.length && catItems.length > 0;
+
+              return (
+                <motion.div 
+                  key={category}
+                  layout
+                  className={`bg-slate-900 border rounded-xl overflow-hidden transition-colors ${isAllPacked ? 'border-teal-500/30' : 'border-slate-800'}`}
+                >
+                  <button 
+                    onClick={() => toggleCategory(category)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-900/50 hover:bg-slate-800 transition-colors group"
                   >
-                    {catItems.map(item => (
-                      <div 
-                        key={item.id} 
-                        onClick={() => {
-                          if (item.category === 'ETIQUETAS FACTURACIÓN' || item.scannedCode) {
-                            setSelectedTag(item);
-                          } else {
-                            toggleItem(trip.id, item.id, item.packed);
-                          }
-                        }}
-                        className="flex items-center justify-between py-2.5 px-3 hover:bg-slate-800/30 transition-colors group cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3 flex-1">
-                          <div 
-                            onClick={(e) => {
-                              if (item.category === 'ETIQUETAS FACTURACIÓN' || item.scannedCode) {
-                                e.stopPropagation();
-                                toggleItem(trip.id, item.id, item.packed);
-                              }
-                            }}
-                            className={`w-6 h-6 rounded flex items-center justify-center transition-colors border ${item.packed ? 'bg-teal-500 border-teal-500' : 'bg-slate-950 border-slate-700'}`}
-                          >
-                            {item.packed && <Check className="w-4 h-4 text-slate-900" strokeWidth={3} />}
-                          </div>
-                          <span className={`text-base font-medium transition-colors flex-1 ${item.packed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
-                            {item.name}
-                            {item.suitcaseName && (
-                              <span className="block text-xs text-indigo-400 mt-0.5 no-underline">
-                                🧳 {item.suitcaseName}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          {(item.category === 'ETIQUETAS FACTURACIÓN' || item.scannedCode) && (
-                            <div className="opacity-100 p-2 text-indigo-400 transition-all mr-1">
-                              <Eye size={18} />
-                            </div>
-                          )}
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); deleteItem(trip.id, item.id); }}
-                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 text-slate-500 hover:text-red-400 transition-all"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    {/* Botón rápido final de lista */}
-                    <div 
-                      onClick={(e) => handleQuickAdd(e, category)}
-                      className="py-2 px-3 hover:bg-slate-800/30 transition-colors flex items-center gap-3 cursor-pointer text-slate-500 hover:text-teal-400"
-                    >
-                      <div className="w-5 h-5 rounded flex items-center justify-center border border-dashed border-slate-600">
-                        <Plus size={12} strokeWidth={3} />
-                      </div>
-                      <span className="text-sm font-medium">Añadir ítem a {category}...</span>
+                    <div className="flex items-center gap-2">
+                      <h3 className={`text-sm font-bold ${isAllPacked ? 'text-teal-400' : 'text-white'}`}>{category}</h3>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-950 rounded text-slate-400">
+                        {packedInCategory} / {catItems.length}
+                      </span>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          );
-        })}
-      </div>
+                    <div className="flex items-center gap-1">
+                      <div 
+                        onClick={(e) => handleQuickAdd(e, category)}
+                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 bg-slate-800 hover:bg-teal-500/20 text-slate-400 hover:text-teal-400 rounded-lg transition-all"
+                        title={`Añadir a ${category}`}
+                      >
+                        <Plus size={14} strokeWidth={3} />
+                      </div>
+                      <div 
+                        onClick={(e) => handleDeleteCategory(e, category)}
+                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-all"
+                        title={`Borrar categoría ${category}`}
+                      >
+                        <Trash2 size={14} />
+                      </div>
+                      {isExpanded ? <ChevronUp className="text-slate-500 w-4 h-4 ml-1" /> : <ChevronDown className="text-slate-500 w-4 h-4 ml-1" />}
+                    </div>
+                  </button>
+
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="border-t border-slate-800/50 divide-y divide-slate-800/50"
+                      >
+                        {catItems.map(item => (
+                          <div 
+                            key={item.id} 
+                            onClick={() => toggleItem(trip.id, item.id, item.packed)}
+                            className="flex items-center justify-between py-2.5 px-3 hover:bg-slate-800/30 transition-colors group cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <div 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleItem(trip.id, item.id, item.packed);
+                                }}
+                                className={`w-6 h-6 rounded flex items-center justify-center transition-colors border ${item.packed ? 'bg-teal-500 border-teal-500' : 'bg-slate-950 border-slate-700'}`}
+                              >
+                                {item.packed && <Check className="w-4 h-4 text-slate-900" strokeWidth={3} />}
+                              </div>
+                              <span className={`text-base font-medium transition-colors flex-1 ${item.packed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                                {item.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); deleteItem(trip.id, item.id); }}
+                                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 text-slate-500 hover:text-red-400 transition-all"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        {/* Botón rápido final de lista */}
+                        <div 
+                          onClick={(e) => handleQuickAdd(e, category)}
+                          className="py-2 px-3 hover:bg-slate-800/30 transition-colors flex items-center gap-3 cursor-pointer text-slate-500 hover:text-teal-400"
+                        >
+                          <div className="w-5 h-5 rounded flex items-center justify-center border border-dashed border-slate-600">
+                            <Plus size={12} strokeWidth={3} />
+                          </div>
+                          <span className="text-sm font-medium">Añadir ítem a {category}...</span>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {activeTab === 'luggage' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {luggageItems.length === 0 ? (
+              <div className="col-span-full text-center py-10 bg-slate-900/30 rounded-3xl border border-slate-800/50 border-dashed">
+                <Luggage className="w-16 h-16 text-slate-700 mx-auto mb-4 opacity-50" />
+                <p className="text-slate-400 font-medium">No has escaneado ninguna maleta.</p>
+                <p className="text-sm text-slate-500 mt-2">Usa el botón superior para escanear las etiquetas de facturación.</p>
+              </div>
+            ) : (
+              luggageItems.map((item) => (
+                <div 
+                  key={item.id} 
+                  onClick={() => setSelectedTag(item)}
+                  className="bg-slate-900 border border-slate-800 rounded-2xl p-4 hover:border-indigo-500/50 transition-colors cursor-pointer group"
+                >
+                  <div className="flex gap-4 h-24">
+                    <div className="w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+                      {item.photoUrl ? (
+                        <img src={item.photoUrl} alt="Maleta" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-700">
+                          <Luggage size={32} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <h4 className="text-white font-bold truncate">{item.suitcaseName || 'Equipaje Facturado'}</h4>
+                      <p className="text-indigo-400 text-xs font-mono truncate mt-1">{item.scannedCode || 'SIN CÓDIGO'}</p>
+                      {item.flightLeg && (
+                        <p className="text-slate-400 text-xs mt-1 truncate flex items-center gap-1">
+                          <MapPin size={12} /> {item.flightLeg}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* Modal para añadir Ítem */}
       <AnimatePresence>
@@ -443,7 +511,7 @@ export default function PackingPage() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-slate-900 rounded-3xl p-6 w-full max-w-sm border border-indigo-500/30 shadow-[0_0_40px_rgba(99,102,241,0.15)]"
+              className="bg-slate-900 rounded-3xl p-6 w-full max-w-sm border border-indigo-500/30 shadow-[0_0_40px_rgba(99,102,241,0.15)] max-h-[85dvh] overflow-y-auto"
             >
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-indigo-500/20 text-indigo-400 rounded-2xl">
@@ -534,7 +602,15 @@ export default function PackingPage() {
                 <div className="flex gap-3 pt-4">
                   <button 
                     type="button" 
-                    onClick={() => { setIsTagDetailsModalOpen(false); setScannedCode(''); setLuggagePhotoFile(null); setLuggagePhotoPreview(null); setTrackerType('none'); setTrackerId(''); }}
+                    onClick={() => { 
+                      setIsTagDetailsModalOpen(false); 
+                      setScannedCode(''); 
+                      setLuggagePhotoFile(null); 
+                      setLuggagePhotoPreview(null); 
+                      setTrackerType('none'); 
+                      setTrackerId(''); 
+                      setEditingLuggageId(null);
+                    }}
                     className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors"
                     disabled={isUploadingPhoto}
                   >
@@ -561,7 +637,7 @@ export default function PackingPage() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 50, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-[2rem] w-full max-w-sm overflow-hidden shadow-2xl relative"
+              className="bg-white rounded-[2rem] w-full max-w-sm overflow-y-auto max-h-[85dvh] shadow-2xl relative"
             >
               {selectedTag.photoUrl ? (
                 <div className="w-full h-64 bg-slate-200">
@@ -580,6 +656,38 @@ export default function PackingPage() {
               >
                 <X size={20} />
               </button>
+              
+              <div className="absolute top-4 left-4 flex gap-2">
+                <button 
+                  onClick={() => {
+                    setSuitcaseName(selectedTag.suitcaseName || '');
+                    setFlightLeg(selectedTag.flightLeg || '');
+                    setTrackerType(selectedTag.trackerType || 'none');
+                    setTrackerId(selectedTag.trackerId || '');
+                    setScannedCode(selectedTag.scannedCode || '');
+                    setLuggagePhotoPreview(selectedTag.photoUrl);
+                    setEditingLuggageId(selectedTag.id);
+                    setIsTagDetailsModalOpen(true);
+                  }}
+                  className="p-2 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md transition-colors"
+                  title="Editar maleta"
+                >
+                  <Eye size={20} className="hidden" /> {/* Para alinear el botón y usar un icono similar */}
+                  <span className="text-sm font-bold px-1">Editar</span>
+                </button>
+                <button 
+                  onClick={async () => {
+                    if (window.confirm('¿Seguro que quieres borrar esta maleta?')) {
+                      await deleteItem(trip.id, selectedTag.id);
+                      setSelectedTag(null);
+                    }
+                  }}
+                  className="p-2 bg-red-500/80 hover:bg-red-500 text-white rounded-full backdrop-blur-md transition-colors"
+                  title="Eliminar maleta"
+                >
+                  <Trash2 size={20} />
+                </button>
+              </div>
 
               <div className="p-8 text-center bg-white relative">
                 <div className="absolute top-0 left-0 w-full h-4 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#f87171_10px,#f87171_20px)] opacity-20 -mt-4"></div>

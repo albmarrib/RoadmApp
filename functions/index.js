@@ -73,8 +73,8 @@ exports.analyzeDocument = onCall(
         
         EJEMPLO PARA VUELOS DE IDA Y VUELTA:
         [
-          { "type": "flight", "title": "Vuelo Ida: Madrid - Tokio", "startTime": "...", "endTime": "...", "cost": 1200, "location": {"name": "Madrid"} },
-          { "type": "flight", "title": "Vuelo Vuelta: Tokio - Madrid", "startTime": "...", "endTime": "...", "cost": 0, "location": {"name": "Tokio"} }
+          { "type": "flight", "title": "Vuelo Ida: Madrid - Tokio", "startTime": "...", "endTime": "...", "cost": 1200, "isPaid": true, "location": {"name": "Madrid"} },
+          { "type": "flight", "title": "Vuelo Vuelta: Tokio - Madrid", "startTime": "...", "endTime": "...", "cost": 0, "isPaid": true, "location": {"name": "Tokio"} }
         ]
 
         Estructura obligatoria del JSON para cada evento:
@@ -85,6 +85,7 @@ exports.analyzeDocument = onCall(
           "endTime": "YYYY-MM-DDTHH:mm:ss (si aplica)",
           "cost": "Número (coste INDIVIDUAL de este evento, ej: 478.50)",
           "currency": "Código de moneda en 3 letras (ej: EUR, USD, NZD)",
+          "isPaid": "Booleano. true si está pagado o si no queda claro. false SI Y SOLO SI el documento dice explícitamente que el pago está pendiente (ej: pago a la llegada, pay at property, pending).",
           "location": {
             "name": "Dirección completa y exacta, ciudad, país.",
             "lat": "Número con la latitud GPS de este lugar (usa tu conocimiento general). Obligatorio para que aparezca en el mapa.",
@@ -159,7 +160,7 @@ exports.analyzeImageUtility = onCall(
     if (!request.auth || !request.auth.uid) {
       throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
     }
-    const { fileUrl, mimeType, prompt } = request.data;
+    const { fileUrl, mimeType, prompt, expectJson } = request.data;
     if (!fileUrl || !prompt) {
       throw new HttpsError("invalid-argument", "Se requiere fileUrl y prompt.");
     }
@@ -175,10 +176,18 @@ exports.analyzeImageUtility = onCall(
       const buffer = Buffer.from(arrayBuffer);
       const base64Data = buffer.toString("base64");
 
-      const aiResult = await model.generateContent([
-        prompt,
-        { inlineData: { data: base64Data, mimeType: mimeType || "image/jpeg" } },
-      ]);
+      const generationConfig = {};
+      if (expectJson) {
+        generationConfig.responseMimeType = "application/json";
+      }
+
+      const aiResult = await model.generateContent({
+        contents: [{ role: "user", parts: [
+          { text: prompt },
+          { inlineData: { data: base64Data, mimeType: mimeType || "image/jpeg" } }
+        ] }],
+        generationConfig: generationConfig
+      });
       
       return { text: aiResult.response.text() };
     } catch (error) {

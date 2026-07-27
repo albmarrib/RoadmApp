@@ -150,6 +150,7 @@ export default function DocumentsPage() {
                     if (ev.contactEmail && !duplicateNode.contactEmail) updateData.contactEmail = ev.contactEmail;
                     if (ev.contactName && !duplicateNode.contactName) updateData.contactName = ev.contactName;
                     if (ev.externalUrl && !duplicateNode.externalUrl) updateData.externalUrl = ev.externalUrl;
+                    if (ev.isPaid !== undefined && duplicateNode.isPaid === undefined) updateData.isPaid = ev.isPaid;
                     
                     await updateNode(trip.id, duplicateNode.id, updateData);
                     
@@ -180,6 +181,7 @@ export default function DocumentsPage() {
                     contactEmail: ev.contactEmail || null,
                     contactName: ev.contactName || null,
                     externalUrl: ev.externalUrl || null,
+                    isPaid: ev.isPaid !== false,
                     isAIImported: true,
                     attachments: [{ name: doc.title, url: doc.url }]
                   };

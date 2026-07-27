@@ -114,6 +114,17 @@ export const usePackingStore = create((set, get) => ({
     }
   },
 
+  updateItem: async (tripId, itemId, updates) => {
+    try {
+      const itemRef = doc(db, `trips/${tripId}/packing/${itemId}`);
+      await updateDoc(itemRef, updates);
+      return true;
+    } catch (err) {
+      console.error("Error updating item:", err);
+      throw err;
+    }
+  },
+
   deleteItem: async (tripId, itemId) => {
     try {
       const itemRef = doc(db, `trips/${tripId}/packing/${itemId}`);

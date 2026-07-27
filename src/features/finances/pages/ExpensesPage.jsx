@@ -40,6 +40,7 @@ export default function ExpensesPage() {
         currency: n.currency || 'EUR',
         category: n.type,
         date: n.startTime,
+        isPaid: n.isPaid !== false,
         // Los nodos del itinerario por defecto no entran en Splitwise a menos que se hayan editado para ello (futuro)
         paidBy: null,
         splitBetween: [] 
@@ -47,7 +48,8 @@ export default function ExpensesPage() {
 
     const manualExpenses = expenses.map(e => ({
       ...e,
-      isNode: false
+      isNode: false,
+      isPaid: true
     }));
 
     return [...nodeExpenses, ...manualExpenses].sort((a, b) => {
@@ -59,6 +61,9 @@ export default function ExpensesPage() {
 
   // Cálculos de Resumen
   const totalSpent = unifiedExpenses.reduce((acc, exp) => acc + exp.amount, 0);
+  const totalPaid = unifiedExpenses.filter(e => e.isPaid).reduce((acc, exp) => acc + exp.amount, 0);
+  const totalPending = unifiedExpenses.filter(e => !e.isPaid).reduce((acc, exp) => acc + exp.amount, 0);
+  
   const budget = trip?.budget ? parseFloat(trip.budget) : 0;
   const budgetPercentage = budget > 0 ? Math.min((totalSpent / budget) * 100, 100) : 0;
   
@@ -206,10 +211,21 @@ export default function ExpensesPage() {
               <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-bl-full -mr-8 -mt-8"></div>
                 
-                <h3 className="text-slate-400 font-medium mb-1">Gasto Total</h3>
+                <h3 className="text-slate-400 font-medium mb-1">Gasto Total Planificado</h3>
                 <div className="flex items-baseline gap-2 mb-6">
                   <span className="text-4xl font-black text-white">{totalSpent.toFixed(2)}</span>
                   <span className="text-xl font-bold text-teal-400">{trip.currency || 'EUR'}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4">
+                    <p className="text-[10px] text-emerald-400 font-bold uppercase mb-1">Total Pagado</p>
+                    <p className="text-lg font-bold text-emerald-300">{totalPaid.toFixed(2)} <span className="text-xs">{trip.currency || 'EUR'}</span></p>
+                  </div>
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
+                    <p className="text-[10px] text-amber-400 font-bold uppercase mb-1">Total Pendiente</p>
+                    <p className="text-lg font-bold text-amber-300">{totalPending.toFixed(2)} <span className="text-xs">{trip.currency || 'EUR'}</span></p>
+                  </div>
                 </div>
 
                 {budget > 0 && (
@@ -299,6 +315,16 @@ export default function ExpensesPage() {
                         <h4 className="text-white font-bold text-sm truncate">{exp.title}</h4>
                         <div className="flex items-center gap-2 mt-1 overflow-hidden">
                           <span className="text-xs text-slate-400 capitalize whitespace-nowrap">{exp.category}</span>
+                          {!exp.isPaid && (
+                            <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded uppercase font-bold truncate">
+                              Pendiente
+                            </span>
+                          )}
+                          {exp.isPaid && exp.isNode && (
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded uppercase font-bold truncate">
+                              Pagado
+                            </span>
+                          )}
                           {exp.paidBy && trip.isGroupMode && (
                             <span className="text-[10px] bg-indigo-900/30 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded truncate">
                               Pagó: {exp.paidBy}
