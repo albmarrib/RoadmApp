@@ -468,16 +468,18 @@ exports.receiveEmailWebhook = onRequest(
       }
 
       // Si no tiene adjuntos, guardamos el cuerpo del correo como documento
-      if (!hasAttachments && parsed.text) {
-        const textContent = parsed.text.trim();
+      if (!hasAttachments && (parsed.html || parsed.text)) {
+        const isHtml = !!parsed.html;
+        const textContent = (parsed.html || parsed.text).trim();
         if (textContent.length > 10) {
-          const fileName = `trips/${matchedTrip.id}/email_body_${Date.now()}.txt`;
+          const extension = isHtml ? 'html' : 'txt';
+          const fileName = `trips/${matchedTrip.id}/email_body_${Date.now()}.${extension}`;
           const file = bucket.file(fileName);
           const token = uuidv4();
           
           await file.save(Buffer.from(textContent, 'utf-8'), {
             metadata: {
-              contentType: 'text/plain',
+              contentType: isHtml ? 'text/html' : 'text/plain',
               metadata: {
                 firebaseStorageDownloadTokens: token
               }
@@ -504,3 +506,92 @@ exports.receiveEmailWebhook = onRequest(
     }
   }
 );
+
+// --- FUNCIÓN 6: RECOMENDACIONES CLIMÁTICAS CON IA (getClimateAdvice) ---
+exports.getClimateAdvice = onCall({ region: "europe-west1", memory: "256Mi", secrets: ["GEMINI_API_KEY"] }, async (request) => {
+  try {
+    const { destination, startDate, endDate, itineraryLocations } = request.data;
+    
+    if (!destination) {
+      throw new Error("El destino es obligatorio.");
+    }
+    
+    // Iniciar Gemini
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-flash-latest",
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
+    
+    let datesStr = "fechas no especificadas";
+    if (startDate && endDate) {
+      // startDate y endDate pueden venir como strings o milisegundos. Lo pasamos a string legible.
+      const d1 = new Date(startDate);
+      const d2 = new Date(endDate);
+      if (!isNaN(d1) && !isNaN(d2)) {
+        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        const m1 = monthNames[d1.getMonth()];
+        const m2 = monthNames[d2.getMonth()];
+        datesStr = (m1 === m2) ? `en ${m1}` : `entre ${m1} y ${m2}`;
+      }
+    }
+    
+    const itineraryContext = (itineraryLocations && itineraryLocations.length > 0)
+      ? `Además, durante su viaje visitará las siguientes ubicaciones específicas: ${itineraryLocations.join(', ')}.`
+      : '';
+    
+    const prompt = `
+      Eres un asistente experto en viajes y meteorología.
+      El usuario va a viajar a: ${destination}
+      En la siguiente época del año: ${datesStr}.
+      ${itineraryContext}
+      
+      Tu objetivo es dar una recomendación clara, directa y útil sobre qué ropa meter en la maleta y qué clima histórico/promedio esperar en esas fechas teniendo en cuenta TODOS los lugares que visitará.
+      
+      Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta:
+      {
+        "climateSummary": "Un párrafo breve y amistoso sobre el clima histórico en esa época (ej: 'En octubre en Tokio puedes esperar un clima templado pero lluvioso, con temperaturas entre 15ºC y 22ºC').",
+        "clothingAdvice": "Un párrafo con consejos clave sobre qué ropa llevar (ej: 'Lleva vestimenta por capas, calzado muy cómodo y resistente al agua, y un chubasquero').",
+        "essentialItems": ["Paraguas", "Chaqueta ligera", "Zapatillas impermeables"]
+      }
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    let parsedData;
+    try {
+      parsedData = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+    } catch (e) {
+      throw new Error("La IA no devolvió un formato válido.");
+    }
+    
+    return { success: true, data: parsedData };
+    
+  } catch (error) {
+    console.error("Error en getClimateAdvice:", error);
+    throw new HttpsError("internal", error.message);
+  }
+});
+
+// --- FUNCIÓN 7: LEER ARCHIVOS DE TEXTO SIN CORS (readDocumentText) ---
+exports.readDocumentText = onCall({ region: "europe-west1", memory: "128Mi" }, async (request) => {
+  try {
+    const { url } = request.data;
+    if (!url) throw new HttpsError("invalid-argument", "Se requiere una URL.");
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
+    const text = await response.text();
+    
+    return { success: true, text };
+  } catch (error) {
+    console.error("Error en readDocumentText:", error);
+    throw new HttpsError("internal", error.message);
+  }
+});

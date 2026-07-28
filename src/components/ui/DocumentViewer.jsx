@@ -2,15 +2,21 @@ import { X, ExternalLink, DownloadCloud, FileWarning } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { app } from '../../config/firebase';
 
 export default function DocumentViewer({ url, name, isOpen, onClose }) {
   if (!isOpen || !url) return null;
 
   const isPdf = url.toLowerCase().includes('.pdf') || name.toLowerCase().endsWith('.pdf');
   const isEmail = url.toLowerCase().includes('.msg') || name.toLowerCase().endsWith('.msg') || name.toLowerCase().endsWith('.eml');
+  const isText = url.toLowerCase().includes('.txt') || name.toLowerCase().endsWith('.txt') || url.toLowerCase().includes('email_body');
+  const isHtml = url.toLowerCase().includes('.html') || name.toLowerCase().endsWith('.html');
   
   const [safeUrl, setSafeUrl] = useState(url);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [textContent, setTextContent] = useState('');
+  const [isLoadingText, setIsLoadingText] = useState(false);
 
   useEffect(() => {
     const handleStatus = () => setIsOffline(!navigator.onLine);
@@ -46,6 +52,28 @@ export default function DocumentViewer({ url, name, isOpen, onClose }) {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [url, isOffline]);
+
+  useEffect(() => {
+    if ((isText || isHtml) && safeUrl) {
+      setIsLoadingText(true);
+      const functions = getFunctions(app, 'europe-west1');
+      const readText = httpsCallable(functions, 'readDocumentText');
+      
+      readText({ url: safeUrl })
+        .then(result => {
+          if (result.data?.success) {
+            setTextContent(result.data.text);
+          } else {
+            setTextContent("No se pudo cargar el contenido del archivo.");
+          }
+        })
+        .catch(err => {
+          console.error("Error fetching text/html content via functions:", err);
+          setTextContent("Error de conexión al cargar el documento.");
+        })
+        .finally(() => setIsLoadingText(false));
+    }
+  }, [isText, isHtml, safeUrl]);
 
   return (
     <AnimatePresence>
@@ -87,6 +115,33 @@ export default function DocumentViewer({ url, name, isOpen, onClose }) {
                 <a href={safeUrl} download={name} className="mt-4 bg-teal-500 hover:bg-teal-400 text-slate-900 px-6 py-3 rounded-xl font-bold transition-colors">
                   Descargar {name}
                 </a>
+              </div>
+            ) : isHtml ? (
+              <div className="w-full h-full flex flex-col bg-white rounded-xl overflow-hidden shadow-2xl relative">
+                {isLoadingText ? (
+                  <div className="flex items-center justify-center h-full text-slate-400 bg-slate-800">
+                    Cargando email original...
+                  </div>
+                ) : (
+                  <iframe
+                    srcDoc={textContent}
+                    sandbox="allow-same-origin allow-popups"
+                    title={name}
+                    className="w-full h-full border-0"
+                  />
+                )}
+              </div>
+            ) : isText ? (
+              <div className="w-full h-full flex flex-col bg-slate-800 rounded-xl overflow-hidden shadow-2xl relative">
+                {isLoadingText ? (
+                  <div className="flex items-center justify-center h-full text-slate-400">
+                    Cargando texto...
+                  </div>
+                ) : (
+                  <div className="p-6 md:p-8 overflow-y-auto w-full h-full text-slate-200 bg-slate-900 font-mono text-sm leading-relaxed whitespace-pre-wrap">
+                    {textContent}
+                  </div>
+                )}
               </div>
             ) : isPdf ? (
               <div className="w-full h-full flex flex-col max-w-5xl bg-slate-800 rounded-xl overflow-hidden shadow-2xl relative">

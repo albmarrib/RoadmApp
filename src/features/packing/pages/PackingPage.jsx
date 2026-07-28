@@ -3,8 +3,9 @@ import { useOutletContext } from 'react-router-dom';
 import { usePackingStore } from '../../../store/packingStore';
 import { useAuthStore } from '../../../store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Luggage, Check, Plus, Trash2, ChevronDown, ChevronUp, ScanBarcode, X, Camera, Eye, Compass, MapPin, Save } from 'lucide-react';
+import { Luggage, Check, Plus, Trash2, ChevronDown, ChevronUp, ScanBarcode, X, Camera, Eye, Compass, MapPin, Save, ThermometerSun } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
+import WeatherAssistant from '../components/WeatherAssistant';
 
 export default function PackingPage() {
   const { trip } = useOutletContext();
@@ -30,6 +31,7 @@ export default function PackingPage() {
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('checklist'); // 'checklist' | 'luggage'
   const [editingLuggageId, setEditingLuggageId] = useState(null);
+  const [isWeatherAssistantOpen, setIsWeatherAssistantOpen] = useState(false);
 
   const handleStartScan = async () => {
     try {
@@ -212,17 +214,25 @@ export default function PackingPage() {
       <div className="flex gap-3">
         <button 
           onClick={handleStartScan}
-          className="flex-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 p-3 rounded-2xl flex flex-col items-center justify-center gap-2 font-bold transition-colors text-sm text-center"
+          className="flex-[2] bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 p-3 rounded-2xl flex flex-col items-center justify-center gap-2 font-bold transition-colors text-sm text-center"
         >
           <ScanBarcode size={24} strokeWidth={2} />
           Escanear Maleta / Tag
         </button>
         <button 
           onClick={() => setIsTrackingModalOpen(true)}
-          className="flex-1 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 p-3 rounded-2xl flex flex-col items-center justify-center gap-2 font-bold transition-colors text-sm text-center"
+          className="flex-[2] bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 p-3 rounded-2xl flex flex-col items-center justify-center gap-2 font-bold transition-colors text-sm text-center"
         >
           <Compass size={24} strokeWidth={2} />
           Rastreo por Tags Externos
+        </button>
+        <button 
+          onClick={() => setIsWeatherAssistantOpen(true)}
+          className="flex-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 p-3 rounded-2xl flex flex-col items-center justify-center gap-2 font-bold transition-colors text-sm text-center relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-400/20 via-transparent to-transparent opacity-50"></div>
+          <ThermometerSun size={24} strokeWidth={2} className="relative z-10" />
+          <span className="relative z-10 hidden sm:inline">Clima</span>
         </button>
       </div>
 
@@ -802,6 +812,12 @@ export default function PackingPage() {
             </motion.div>
           </div>
         )}
+
+        <WeatherAssistant 
+          trip={trip} 
+          isOpen={isWeatherAssistantOpen} 
+          onClose={() => setIsWeatherAssistantOpen(false)} 
+        />
       </AnimatePresence>
     </div>
   );
