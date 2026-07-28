@@ -1,13 +1,15 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { usePackingStore } from '../../../store/packingStore';
+import { useAuthStore } from '../../../store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Luggage, Check, Plus, Trash2, ChevronDown, ChevronUp, ScanBarcode, X, Camera, Eye, Compass, MapPin } from 'lucide-react';
+import { Luggage, Check, Plus, Trash2, ChevronDown, ChevronUp, ScanBarcode, X, Camera, Eye, Compass, MapPin, Save } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 export default function PackingPage() {
   const { trip } = useOutletContext();
-  const { items, subscribeToPacking, toggleItem, deleteItem, addItem, deleteCategory, updateItem, isLoading } = usePackingStore();
+  const { user } = useAuthStore();
+  const { items, subscribeToPacking, toggleItem, deleteItem, addItem, deleteCategory, updateItem, isLoading, saveUserTemplate } = usePackingStore();
   
   const [expandedCategories, setExpandedCategories] = useState({});
   const [isAdding, setIsAdding] = useState(false);
@@ -45,10 +47,10 @@ export default function PackingPage() {
 
   useEffect(() => {
     if (trip?.id) {
-      const unsubscribe = subscribeToPacking(trip.id);
+      const unsubscribe = subscribeToPacking(trip.id, user?.uid);
       return () => unsubscribe && unsubscribe();
     }
-  }, [trip?.id, subscribeToPacking]);
+  }, [trip?.id, subscribeToPacking, user?.uid]);
 
   useEffect(() => {
     let html5QrCode;
@@ -276,13 +278,30 @@ export default function PackingPage() {
             </div>
           </div>
 
-          <div className="mb-4">
+          <div className="flex gap-3 mb-4">
             <button 
               onClick={() => { setNewItemCategory(''); setNewItemName(''); setIsAdding(true); }}
-              className="w-full bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
+              className="flex-1 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
             >
               <Plus size={20} strokeWidth={3} />
-              Nueva Categoría
+              <span className="hidden sm:inline">Nueva Categoría</span>
+              <span className="sm:hidden">Categoría</span>
+            </button>
+            <button 
+              onClick={async () => {
+                try {
+                  await saveUserTemplate(user.uid);
+                  alert("¡Plantilla personal guardada! Se usará por defecto en tus próximos viajes.");
+                } catch(e) {
+                  alert("Error al guardar la plantilla.");
+                }
+              }}
+              className="flex-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 p-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-colors"
+              title="Guardar categorías e items actuales como mi plantilla por defecto para nuevos viajes"
+            >
+              <Save size={20} />
+              <span className="hidden sm:inline">Guardar como mi Plantilla</span>
+              <span className="sm:hidden">Guardar Plantilla</span>
             </button>
           </div>
 

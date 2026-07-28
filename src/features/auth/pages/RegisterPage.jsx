@@ -26,13 +26,13 @@ export default function RegisterPage() {
       
       await updateProfile(user, { displayName: name });
 
-      // Core SaaS Requirement: Se establece hasPaid en false
-      // Solo tras pagar por Stripe/otra pasarela, se actualizaría a true en Firestore
+      // Core SaaS Requirement: Se establece tier en 'standard' por defecto
+      // Solo tras pagar por Stripe, el webhook actualizará a 'premium' en Firestore
       const userDoc = {
         uid: user.uid,
         email: user.email,
         displayName: name,
-        hasPaid: false, 
+        tier: 'standard', 
         createdAt: new Date().toISOString()
       };
       

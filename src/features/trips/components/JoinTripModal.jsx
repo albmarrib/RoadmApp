@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { X, Users, KeyRound } from 'lucide-react';
 
 export default function JoinTripModal({ isOpen, onClose }) {
-  const { joinTripByCode } = useTripStore();
-  const { user } = useAuthStore();
+  const { trips, joinTripByCode } = useTripStore();
+  const { user, profile } = useAuthStore();
   const navigate = useNavigate();
 
   const [inviteCode, setInviteCode] = useState('');
@@ -14,6 +14,9 @@ export default function JoinTripModal({ isOpen, onClose }) {
   const [error, setError] = useState(null);
 
   if (!isOpen) return null;
+
+  const isStandard = profile?.tier === 'standard' || !profile?.tier;
+  const hasReachedLimit = isStandard && trips.length >= 2;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,10 +54,33 @@ export default function JoinTripModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <p className="text-sm text-slate-400 mb-4">
-            Introduce el código de 6 caracteres que te ha compartido el creador del viaje para unirte como compañero.
-          </p>
+        {hasReachedLimit ? (
+          <div className="p-6 text-center space-y-4">
+            <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl inline-block mb-2">
+              <Users className="w-8 h-8 text-amber-500 mx-auto" />
+            </div>
+            <h3 className="text-xl font-bold text-white">Límite Alcanzado</h3>
+            <p className="text-sm text-slate-400">
+              La versión Standard te permite tener un máximo de 2 viajes activos al mismo tiempo.
+            </p>
+            <p className="text-sm text-slate-400">
+              Hazte Premium para unirte a viajes ilimitados o elimina un viaje existente para hacer espacio.
+            </p>
+            <div className="pt-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <p className="text-sm text-slate-400 mb-4">
+              Introduce el código de 6 caracteres que te ha compartido el creador del viaje para unirte como compañero.
+            </p>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-lg">
@@ -94,6 +120,7 @@ export default function JoinTripModal({ isOpen, onClose }) {
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

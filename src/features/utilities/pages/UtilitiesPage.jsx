@@ -5,8 +5,11 @@ import LiveTranslator from '../components/LiveTranslator';
 import TipCalculator from '../components/TipCalculator';
 import UnitConverter from '../components/UnitConverter';
 import { Coins, Languages, Percent, Ruler } from 'lucide-react';
+import { useAuthStore } from '../../../store/authStore';
+import PremiumOverlay from '../../../components/ui/PremiumOverlay';
 
 export default function UtilitiesPage() {
+  const { profile } = useAuthStore();
   const { trip } = useOutletContext();
   const [activeTab, setActiveTab] = useState('currency'); // currency | translate | tip | units
 
@@ -46,7 +49,11 @@ export default function UtilitiesPage() {
       {/* Contenido de la Utilidad Activa */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden relative min-h-[400px]">
         {activeTab === 'currency' && <CurrencyConverter trip={trip} />}
-        {activeTab === 'translate' && <LiveTranslator trip={trip} />}
+        {activeTab === 'translate' && (
+          <PremiumOverlay isPremium={profile?.tier === 'premium'} featureName="el Traductor Simultáneo">
+            <LiveTranslator trip={trip} />
+          </PremiumOverlay>
+        )}
         {activeTab === 'tip' && <TipCalculator />}
         {activeTab === 'units' && <UnitConverter />}
       </div>

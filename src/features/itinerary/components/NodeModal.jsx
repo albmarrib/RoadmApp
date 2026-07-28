@@ -3,11 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, UploadCloud, Plane, Hotel, Car, MapPin, Trash2, File as FileIcon, XCircle, Search, CarFront, Phone, MessageCircle, Mail, User, Route } from 'lucide-react';
 import { Timestamp } from 'firebase/firestore';
 import { useItineraryStore } from '../../../store/itineraryStore';
+import { useTripStore } from '../../../store/tripStore';
 import { format } from 'date-fns';
 import DocumentViewer from '../../../components/ui/DocumentViewer';
 
 export default function NodeModal({ tripId, isOpen, onClose, editingNode = null }) {
   const { addNode, updateNode, deleteNode, nodes } = useItineraryStore();
+  const { trips } = useTripStore();
+  const currentTrip = trips.find(t => t.id === tripId);
+  const defaultAlarm = currentTrip?.defaultAlarmOffset !== undefined ? currentTrip.defaultAlarmOffset : 1440;
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -31,7 +35,8 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
     routeDistanceKm: '',
     fuelConsumption: '',
     fuelPrice: '',
-    isPaid: true
+    isPaid: true,
+    alarmOffset: defaultAlarm
   });
   const [newFiles, setNewFiles] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
@@ -71,7 +76,8 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         routeDistanceKm: editingNode.routeDistanceKm || '',
         fuelConsumption: editingNode.fuelConsumption || '',
         fuelPrice: editingNode.fuelPrice || '',
-        isPaid: editingNode.isPaid !== false // por defecto true
+        isPaid: editingNode.isPaid !== false,
+        alarmOffset: editingNode.alarmOffset !== undefined ? editingNode.alarmOffset : defaultAlarm
       });
       setExistingAttachments(editingNode.attachments || []);
       setNewFiles([]);
@@ -95,7 +101,7 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         cost: '', currency: 'EUR', notes: '', externalUrl: '',
         contactPhone: '', contactWhatsapp: '', contactEmail: '', contactName: '',
         routeOrigin: '', routeDestination: '', routeMode: 'driving', routeDistanceKm: '', fuelConsumption: '', fuelPrice: '',
-        isPaid: true
+        isPaid: true, alarmOffset: defaultAlarm
       });
       setExistingAttachments([]);
       setNewFiles([]);
@@ -274,7 +280,8 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         routeMode: formData.routeMode,
         routeDistanceKm: formData.routeDistanceKm,
         fuelConsumption: formData.type === 'car_rental' ? formData.fuelConsumption : '',
-        fuelPrice: formData.type === 'car_rental' ? formData.fuelPrice : ''
+        fuelPrice: formData.type === 'car_rental' ? formData.fuelPrice : '',
+        alarmOffset: parseInt(formData.alarmOffset, 10)
       };
 
       if (editingNode) {
@@ -622,6 +629,30 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">Enlace (Página del hotel, info, reserva...)</label>
                 <input type="url" value={formData.externalUrl} onChange={e => setFormData({...formData, externalUrl: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-teal-500" placeholder="https://..." />
+              </div>
+            </div>
+
+            {/* Configuración de Alarma para Calendario */}
+            <div className="bg-orange-900/10 p-4 rounded-2xl border border-orange-500/20 space-y-4">
+              <h3 className="text-sm font-medium text-orange-400">Notificación de Calendario</h3>
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Avisar antes del evento</label>
+                <select 
+                  value={formData.alarmOffset} 
+                  onChange={e => setFormData({...formData, alarmOffset: e.target.value})} 
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                >
+                  <option value="-1">Sin aviso</option>
+                  <option value="0">A la hora del evento</option>
+                  <option value="15">15 minutos antes</option>
+                  <option value="30">30 minutos antes</option>
+                  <option value="60">1 hora antes</option>
+                  <option value="120">2 horas antes</option>
+                  <option value="180">3 horas antes</option>
+                  <option value="1440">1 día antes (24 horas)</option>
+                  <option value="2880">2 días antes (48 horas)</option>
+                  <option value="10080">1 semana antes</option>
+                </select>
               </div>
             </div>
 

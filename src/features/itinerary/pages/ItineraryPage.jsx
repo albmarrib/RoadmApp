@@ -4,7 +4,7 @@ import { useItineraryStore } from '../../../store/itineraryStore';
 import TimelineNode from '../components/TimelineNode';
 import NodeModal from '../components/NodeModal';
 import ItineraryCalendar from '../components/ItineraryCalendar';
-import { Plus, List, Calendar as CalendarIcon, Filter } from 'lucide-react';
+import { Plus, List, Calendar as CalendarIcon, Filter, CalendarCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -77,17 +77,86 @@ export default function ItineraryPage() {
     return a.localeCompare(b);
   });
 
+  const generateTripCalendar = () => {
+    const defaultAlarm = trip?.defaultAlarmOffset !== undefined ? trip.defaultAlarmOffset : 1440;
+    const nowISO = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    
+    let icsData = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//RoadmApp//Itinerary//EN',
+      `X-WR-CALNAME:${trip?.title || 'Viaje RoadmApp'}`
+    ];
+
+    nodes.forEach(node => {
+      if (!node.startTime) return;
+      const startD = node.startTime.toDate();
+      const endD = node.endTime ? node.endTime.toDate() : new Date(startD.getTime() + 60 * 60 * 1000);
+      const startISO = startD.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const endISO = endD.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      
+      const alarmMins = node.alarmOffset !== undefined ? parseInt(node.alarmOffset, 10) : defaultAlarm;
+
+      icsData.push('BEGIN:VEVENT');
+      icsData.push(`UID:${node.id}@roadmapp.com`);
+      icsData.push(`DTSTAMP:${nowISO}`);
+      icsData.push(`DTSTART:${startISO}`);
+      icsData.push(`DTEND:${endISO}`);
+      icsData.push(`SUMMARY:${node.title}`);
+      icsData.push(`DESCRIPTION:${node.notes || ''}`);
+      
+      if (alarmMins >= 0) {
+        icsData.push('BEGIN:VALARM');
+        icsData.push(`TRIGGER:-PT${alarmMins}M`);
+        icsData.push('ACTION:DISPLAY');
+        icsData.push(`DESCRIPTION:Recordatorio de ${node.title}`);
+        icsData.push('END:VALARM');
+        icsData.push('BEGIN:VALARM');
+        icsData.push(`TRIGGER:-PT${alarmMins}M`);
+        icsData.push('ACTION:AUDIO');
+        icsData.push('ATTACH;VALUE=URI:Chord');
+        icsData.push('END:VALARM');
+      }
+      
+      icsData.push('END:VEVENT');
+    });
+
+    icsData.push('END:VCALENDAR');
+
+    const blob = new Blob([icsData.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${(trip?.title || 'viaje').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="max-w-3xl mx-auto pb-20">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">Tu Itinerario</h2>
-        <button 
-          onClick={openCreateModal}
-          className="bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 border border-teal-500/30 font-medium py-2 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Añadir Paso</span>
-        </button>
+        <div className="flex gap-2">
+          {nodes.length > 0 && (
+            <button 
+              onClick={generateTripCalendar}
+              className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border border-orange-500/30 font-medium py-2 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg"
+              title="Sincronizar Calendario"
+            >
+              <CalendarCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">Sincronizar</span>
+            </button>
+          )}
+          <button 
+            onClick={openCreateModal}
+            className="bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 border border-teal-500/30 font-medium py-2 px-4 rounded-xl transition-all flex items-center gap-2 shadow-lg"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Añadir Paso</span>
+          </button>
+        </div>
       </div>
 
       {/* Controles: Vista y Filtros */}

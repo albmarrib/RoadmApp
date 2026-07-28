@@ -5,8 +5,13 @@ import { useExpenseStore } from '../../../store/expenseStore';
 import { Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { useCameraAI } from '../../utilities/hooks/useCameraAI';
+import { useAuthStore } from '../../../store/authStore';
+import { usePremiumCheckout } from '../../../hooks/usePremiumCheckout';
+import { Lock } from 'lucide-react';
 
 export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) {
+  const { profile } = useAuthStore();
+  const { startCheckout, isCheckoutLoading } = usePremiumCheckout();
   const { addExpense, updateExpense, deleteExpense, isLoading } = useExpenseStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
@@ -203,15 +208,27 @@ export default function ExpenseModal({ trip, isOpen, onClose, editingExpense }) 
                 </div>
               </div>
               {receiptFile && (
-                <button
-                  type="button"
-                  onClick={handleAIAnalyze}
-                  disabled={isAIProcessing}
-                  className="w-full mt-3 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30 hover:border-indigo-500/50 p-3 rounded-xl transition-colors flex items-center justify-center gap-2 font-bold shadow-lg"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  {isAIProcessing ? 'Analizando con IA...' : 'Autocompletar con IA'}
-                </button>
+                profile?.tier === 'premium' ? (
+                  <button
+                    type="button"
+                    onClick={handleAIAnalyze}
+                    disabled={isAIProcessing}
+                    className="w-full mt-3 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30 hover:border-indigo-500/50 p-3 rounded-xl transition-colors flex items-center justify-center gap-2 font-bold shadow-lg"
+                  >
+                    <Sparkles className="w-5 h-5" />
+                    {isAIProcessing ? 'Analizando con IA...' : 'Autocompletar con IA'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startCheckout}
+                    disabled={isCheckoutLoading}
+                    className="w-full mt-3 bg-amber-500/20 text-amber-500 border border-amber-500/30 hover:bg-amber-500/30 hover:border-amber-500/50 p-3 rounded-xl transition-colors flex items-center justify-center gap-2 font-bold shadow-lg"
+                  >
+                    <Lock className="w-5 h-5" />
+                    Actualizar a Premium para escanear
+                  </button>
+                )
               )}
               {editingExpense?.receiptUrl && !receiptFile && (
                 <a href={editingExpense.receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-teal-400 mt-2 inline-block hover:underline">

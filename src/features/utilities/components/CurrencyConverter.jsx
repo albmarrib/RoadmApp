@@ -1,8 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { Camera, RefreshCw, Loader2 } from 'lucide-react';
+import { Camera, RefreshCw, Loader2, Lock } from 'lucide-react';
 import { useCameraAI } from '../hooks/useCameraAI';
+import { useAuthStore } from '../../../store/authStore';
+import { usePremiumCheckout } from '../../../hooks/usePremiumCheckout';
 
 export default function CurrencyConverter({ trip }) {
+  const { profile } = useAuthStore();
+  const { startCheckout, isCheckoutLoading } = usePremiumCheckout();
   const [localAmount, setLocalAmount] = useState('');
   const exchangeRate = trip?.exchangeRate || 1; 
   const fileInputRef = useRef(null);
@@ -53,14 +57,25 @@ export default function CurrencyConverter({ trip }) {
                 placeholder="0.00"
                 className="flex-1 w-full min-w-0 bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-2xl font-black text-white placeholder-slate-600 focus:outline-none focus:border-teal-500 transition-colors appearance-none"
               />
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isProcessing}
-                className="w-12 flex-shrink-0 bg-slate-800 hover:bg-slate-700 text-teal-400 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50"
-                title="Escanear precio con la cámara"
-              >
-                {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
-              </button>
+              {profile?.tier === 'premium' ? (
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessing}
+                  className="w-12 flex-shrink-0 bg-slate-800 hover:bg-slate-700 text-teal-400 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50"
+                  title="Escanear precio con la cámara"
+                >
+                  {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+                </button>
+              ) : (
+                <button 
+                  onClick={startCheckout}
+                  disabled={isCheckoutLoading}
+                  className="w-12 flex-shrink-0 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50"
+                  title="Actualizar a Premium para escanear precios"
+                >
+                  {isCheckoutLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
+                </button>
+              )}
               
               {/* Input oculto para abrir la cámara */}
               <input 

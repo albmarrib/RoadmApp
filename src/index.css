@@ -22,3 +22,29 @@
 .leaflet-top.leaflet-left {
   top: 70px !important;
 }
+
+@media print {
+  /* Ocultar elementos pesados e irrelevantes para imprimir */
+  .leaflet-container, 
+  nav, 
+  button, 
+  iframe,
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Resetear el layout para que fluya hacia abajo sin límites de altura */
+  body, html, #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Eliminar efectos de fondo borroso que matan el rendimiento en iOS */
+  * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+}

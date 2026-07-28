@@ -5,7 +5,7 @@ import { useItineraryStore } from '../../../store/itineraryStore';
 import { format } from 'date-fns';
 import L from 'leaflet';
 import NodeModal from '../../itinerary/components/NodeModal';
-import { Navigation, Loader2, Navigation2, Layers, Bed, Car, Camera, Key, Check } from 'lucide-react';
+import { Navigation, Loader2, Navigation2, Layers, Bed, Car, Camera, Key, Check, Map as MapIcon, Compass } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const getCustomIcon = (type) => {
@@ -71,6 +71,7 @@ function CenterUserButton({ userPos }) {
 function NodePopupContent({ node, userPos, onEdit }) {
   const [routeInfo, setRouteInfo] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showNavOptions, setShowNavOptions] = useState(false);
 
   useEffect(() => {
     if (userPos && node.location) {
@@ -109,18 +110,49 @@ function NodePopupContent({ node, userPos, onEdit }) {
         </div>
       )}
 
-      <div className="flex gap-2 mt-3">
-        <a 
-          href={`https://www.google.com/maps/dir/?api=1&destination=${node.location.lat},${node.location.lng}`}
-          target="_blank" rel="noreferrer"
-          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-center py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-1"
-        >
-          <Navigation className="w-4 h-4" /> Ir
-        </a>
-        <button onClick={() => onEdit(node)} className="flex-1 bg-teal-500 hover:bg-teal-600 text-white py-2 rounded-lg text-sm font-bold transition-colors">
-          Editar
-        </button>
-      </div>
+      {showNavOptions ? (
+        <div className="mt-3 flex flex-col gap-1.5">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-center">Abrir con...</p>
+          <a 
+            href={`https://www.google.com/maps/dir/?api=1&destination=${node.location.lat},${node.location.lng}`}
+            target="_blank" rel="noreferrer"
+            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 border border-slate-200"
+          >
+            <MapIcon className="w-4 h-4 text-blue-500" /> Google Maps
+          </a>
+          <a 
+            href={`http://maps.apple.com/?daddr=${node.location.lat},${node.location.lng}`}
+            target="_blank" rel="noreferrer"
+            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 border border-slate-200"
+          >
+            <Navigation className="w-4 h-4 text-slate-900" /> Apple Maps
+          </a>
+          <a 
+            href={`geo:0,0?q=${node.location.lat},${node.location.lng}`}
+            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 border border-slate-200"
+          >
+            <Compass className="w-4 h-4 text-teal-600" /> Waze / Otra app
+          </a>
+          <button 
+            onClick={() => setShowNavOptions(false)} 
+            className="w-full mt-1 text-slate-400 text-xs font-bold hover:text-slate-600 py-1"
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <div className="flex gap-2 mt-3">
+          <button 
+            onClick={() => setShowNavOptions(true)}
+            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-center py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-1"
+          >
+            <Navigation className="w-4 h-4" /> Ir
+          </button>
+          <button onClick={() => onEdit(node)} className="flex-1 bg-teal-500 hover:bg-teal-600 text-white py-2 rounded-lg text-sm font-bold transition-colors">
+            Editar
+          </button>
+        </div>
+      )}
     </div>
   );
 }

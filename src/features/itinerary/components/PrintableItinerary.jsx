@@ -41,7 +41,12 @@ export default function PrintableItinerary({ trip }) {
   };
 
   return (
-    <div className="hidden print:block bg-white text-black font-sans p-0 w-full mx-auto">
+    <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+      <div 
+        id="printable-itinerary-container"
+        className="bg-white text-black font-sans p-8 w-[800px]"
+        style={{ minHeight: '1122px' }} // A4 height approx
+      >
       <div className="border-b-2 border-black pb-1 mb-2">
         <h1 className="text-2xl font-black uppercase tracking-tight leading-none">{trip.title}</h1>
         <p className="text-sm text-gray-700 font-medium">{trip.destination}</p>
@@ -99,6 +104,7 @@ export default function PrintableItinerary({ trip }) {
           }
         }
       `}} />
+      </div>
     </div>
   );
 }

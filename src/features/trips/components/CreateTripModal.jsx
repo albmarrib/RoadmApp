@@ -6,8 +6,8 @@ import { X, Plane, MapPin, Calendar, Image as ImageIcon, UploadCloud } from 'luc
 import { Timestamp } from 'firebase/firestore';
 
 export default function CreateTripModal({ isOpen, onClose }) {
-  const { createTrip } = useTripStore();
-  const { user } = useAuthStore();
+  const { trips, createTrip } = useTripStore();
+  const { user, profile } = useAuthStore();
   const navigate = useNavigate();
 
   const [title, setTitle] = useState('');
@@ -20,6 +20,9 @@ export default function CreateTripModal({ isOpen, onClose }) {
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
+
+  const isStandard = profile?.tier === 'standard' || !profile?.tier;
+  const hasReachedLimit = isStandard && trips.length >= 2;
 
   const processFile = (file) => {
     if (file && file.type.startsWith('image/')) {
@@ -73,14 +76,14 @@ export default function CreateTripModal({ isOpen, onClose }) {
 
   return (
     <div 
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md"
+      className="fixed inset-0 z-[1000] flex items-start sm:items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
       onPaste={handlePaste}
     >
       <div 
-        className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
+        className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl my-auto flex flex-col max-h-[95vh]"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-6 border-b border-slate-800">
+        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-slate-800 shrink-0">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Plane className="w-5 h-5 text-teal-400" />
             Crear Nuevo Viaje
@@ -93,9 +96,32 @@ export default function CreateTripModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Nombre del Viaje *</label>
+        {hasReachedLimit ? (
+          <div className="p-6 text-center space-y-4">
+            <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl inline-block mb-2">
+              <Plane className="w-8 h-8 text-amber-500 mx-auto" />
+            </div>
+            <h3 className="text-xl font-bold text-white">Límite Alcanzado</h3>
+            <p className="text-sm text-slate-400">
+              La versión Standard te permite tener un máximo de 2 viajes activos al mismo tiempo.
+            </p>
+            <p className="text-sm text-slate-400">
+              Hazte Premium para crear viajes ilimitados o elimina un viaje existente para hacer espacio.
+            </p>
+            <div className="pt-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto hide-scrollbar">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Nombre del Viaje *</label>
             <input 
               type="text" 
               required
@@ -197,6 +223,7 @@ export default function CreateTripModal({ isOpen, onClose }) {
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

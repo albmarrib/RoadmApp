@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import TripSettingsModal from '../features/trips/components/TripSettingsModal';
 import PrintableItinerary from '../features/itinerary/components/PrintableItinerary';
 import DualClock from '../features/utilities/components/DualClock';
+import html2pdf from 'html2pdf.js';
 
 export default function TripLayout() {
   const { tripId } = useParams();
@@ -14,6 +15,7 @@ export default function TripLayout() {
   const location = useLocation();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   useEffect(() => {
     if (trips.length === 0 && user?.uid) {
@@ -96,6 +98,48 @@ export default function TripLayout() {
     }
   };
 
+  const handleGeneratePDF = async () => {
+    setIsGeneratingPDF(true);
+    try {
+      const element = document.getElementById('printable-itinerary-container');
+      if (!element) throw new Error("Element not found");
+      
+      const opt = {
+        margin:       [0.5, 0.5],
+        filename:     `Itinerario_${trip?.title || 'Viaje'}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+      const file = new File([pdfBlob], opt.filename, { type: 'application/pdf' });
+      
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: opt.filename,
+          text: `Aquí tienes el itinerario de nuestro viaje: ${trip?.title}`
+        });
+      } else {
+        // Fallback for browsers that don't support file sharing
+        const url = URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = opt.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Hubo un error al generar el PDF. Asegúrate de tener conexión.");
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   if (isLoading && trips.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white">
@@ -158,11 +202,12 @@ export default function TripLayout() {
           {/* LADO DERECHO: Iconos de acción */}
           <div className="flex items-center gap-1 flex-shrink-0">
             <button 
-              onClick={() => window.print()}
-              className="p-2 text-slate-400 hover:text-teal-400 hover:bg-slate-800 rounded-full transition-colors"
-              title="Exportar a PDF / Imprimir"
+              onClick={handleGeneratePDF}
+              disabled={isGeneratingPDF}
+              className="p-2 text-slate-400 hover:text-teal-400 hover:bg-slate-800 rounded-full transition-colors disabled:opacity-50"
+              title="Exportar a PDF / Compartir"
             >
-              <Printer className="w-5 h-5" />
+              {isGeneratingPDF ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
             </button>
             <button 
               onClick={() => setIsSettingsOpen(true)}

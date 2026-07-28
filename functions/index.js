@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentDeleted } = require("firebase-functions/v2/firestore");
 const { getStorage } = require("firebase-admin/storage");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
@@ -25,6 +26,13 @@ exports.analyzeDocument = onCall(
     }
 
     const uid = request.auth.uid;
+    
+    // Check if user is premium
+    const userDocRef = await db.collection("users").doc(uid).get();
+    if (!userDocRef.exists || userDocRef.data().tier !== 'premium') {
+      throw new HttpsError("permission-denied", "Esta función es exclusiva para usuarios Premium.");
+    }
+
     const { fileUrl, mimeType } = request.data;
 
     if (!fileUrl) {
@@ -160,6 +168,13 @@ exports.analyzeImageUtility = onCall(
     if (!request.auth || !request.auth.uid) {
       throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
     }
+    
+    const uid = request.auth.uid;
+    const userDocRef = await db.collection("users").doc(uid).get();
+    if (!userDocRef.exists || userDocRef.data().tier !== 'premium') {
+      throw new HttpsError("permission-denied", "Esta función es exclusiva para usuarios Premium.");
+    }
+
     const { fileUrl, mimeType, prompt, expectJson } = request.data;
     if (!fileUrl || !prompt) {
       throw new HttpsError("invalid-argument", "Se requiere fileUrl y prompt.");
@@ -194,5 +209,159 @@ exports.analyzeImageUtility = onCall(
       console.error("Error en analyzeImageUtility:", error);
       throw new HttpsError("internal", error.message);
     }
+  }
+);
+
+// --- Función para Transcribir Audio (Traductor de Voz) ---
+exports.transcribeAudio = onCall(
+  {
+    region: "europe-west1",
+    maxInstances: 10,
+    secrets: ["GEMINI_API_KEY"],
+  },
+  async (request) => {
+    if (!request.auth || !request.auth.uid) {
+      throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
+    }
+
+    const uid = request.auth.uid;
+    const userDocRef = await db.collection("users").doc(uid).get();
+    if (!userDocRef.exists || userDocRef.data().tier !== 'premium') {
+      throw new HttpsError("permission-denied", "Esta función es exclusiva para usuarios Premium.");
+    }
+
+    const { base64Audio, mimeType } = request.data;
+    if (!base64Audio) {
+      throw new HttpsError("invalid-argument", "Se requiere base64Audio.");
+    }
+
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      
+      const prompt = "Transcribe exactamente lo que escuchas en el idioma original. Devuelve solo el texto puro, sin comillas ni aclaraciones adicionales.";
+
+      const aiResult = await model.generateContent({
+        contents: [{ role: "user", parts: [
+          { text: prompt },
+          { inlineData: { data: base64Audio, mimeType: mimeType || "audio/webm" } }
+        ] }]
+      });
+      
+      return { text: aiResult.response.text().trim() };
+    } catch (error) {
+      console.error("Error en transcribeAudio:", error);
+      throw new HttpsError("internal", error.message);
+    }
+  }
+);
+
+// --- Función para borrar datos huérfanos cuando se elimina un viaje ---
+exports.onTripDeleted = onDocumentDeleted("trips/{tripId}", async (event) => {
+  const tripId = event.params.tripId;
+  console.log(`Borrando dependencias del viaje: ${tripId}`);
+  
+  // 1. Borrar todas las subcolecciones recursivamente
+  try {
+    const docRef = db.collection("trips").doc(tripId);
+    await db.recursiveDelete(docRef);
+    console.log(`Subcolecciones borradas correctamente para ${tripId}`);
+  } catch (error) {
+    console.error("Error borrando subcolecciones:", error);
+  }
+
+  // 2. Borrar todos los archivos de este viaje en Storage
+  // Nota: Al borrar tripId en la base de datos, en storage guardamos los docs como:
+  // trips/{tripId}/...
+  try {
+    const bucket = storage.bucket();
+    await bucket.deleteFiles({
+      prefix: `trips/${tripId}/`
+    });
+    console.log(`Archivos borrados correctamente para ${tripId} (trips/)`);
+  } catch (error) {
+    console.error("Error borrando archivos en trips/:", error);
+  }
+});
+
+// --- STRIPE INTEGRATION ---
+const { onRequest } = require("firebase-functions/v2/https");
+
+exports.createCheckoutSession = onCall(
+  {
+    region: "europe-west1",
+    maxInstances: 10,
+  },
+  async (request) => {
+    if (!request.auth || !request.auth.uid) {
+      throw new HttpsError("unauthenticated", "Debes iniciar sesión.");
+    }
+
+    const uid = request.auth.uid;
+    const origin = request.rawRequest.headers.origin || "https://roadmapp-e6c2c.web.app";
+
+    const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
+    try {
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'subscription',
+        client_reference_id: uid,
+        line_items: [
+          {
+            price: process.env.STRIPE_PRICE_ID, // Definido en secrets o env
+            quantity: 1,
+          },
+        ],
+        success_url: `${origin}/?checkout=success`,
+        cancel_url: `${origin}/?checkout=cancel`,
+      });
+
+      return { id: session.id, url: session.url };
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      throw new HttpsError("internal", error.message);
+    }
+  }
+);
+
+exports.stripeWebhook = onRequest(
+  {
+    region: "europe-west1",
+  },
+  async (req, res) => {
+    const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.rawBody, 
+        sig, 
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.error("Webhook signature verification failed.", err.message);
+      res.status(400).send(`Webhook Error: ${err.message}`);
+      return;
+    }
+
+    const dataObject = event.data.object;
+
+    if (event.type === 'checkout.session.completed') {
+      const uid = dataObject.client_reference_id;
+      if (uid) {
+        await db.collection("users").doc(uid).update({ tier: 'premium' });
+        console.log(`Usuario ${uid} actualizado a Premium.`);
+      }
+    } else if (event.type === 'customer.subscription.deleted') {
+      // Necesitamos mapear customer -> uid, asumiendo que lo guardamos o lo extraemos
+      // Por simplicidad, si sabemos el UID, lo usamos. 
+      // Si no, podríamos necesitar buscar al usuario por customer_id.
+      // (Para modo pruebas basico de validación, asumiremos webhook básico).
+      console.log('Suscripcion eliminada', dataObject);
+    }
+
+    res.json({received: true});
   }
 );

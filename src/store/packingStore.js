@@ -9,7 +9,7 @@ export const usePackingStore = create((set, get) => ({
   isLoading: true,
   unsubscribe: null,
 
-  subscribeToPacking: (tripId) => {
+  subscribeToPacking: (tripId, userId) => {
     if (get().unsubscribe) {
       get().unsubscribe();
     }
@@ -18,11 +18,10 @@ export const usePackingStore = create((set, get) => ({
     const packingRef = collection(db, `trips/${tripId}/packing`);
     const q = query(packingRef);
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      // Si la colección está vacía y es la primera vez que entramos, inyectar el Excel (seed)
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      // Si la colección está vacía y es la primera vez que entramos, inyectar la plantilla en background
       if (snapshot.empty && get().items.length === 0) {
-        await get().seedDefaultList(tripId);
-        return; // El onSnapshot se volverá a disparar cuando termine el seed
+        get().seedDefaultList(tripId, userId).catch(console.error);
       }
 
       const fetchedItems = snapshot.docs.map(doc => ({
@@ -39,27 +38,63 @@ export const usePackingStore = create((set, get) => ({
     return unsubscribe;
   },
 
-  seedDefaultList: async (tripId) => {
+  seedDefaultList: async (tripId, userId) => {
     try {
+      const { getDoc } = await import('firebase/firestore');
+      let templateToUse = defaultPackingList;
+      
+      if (userId) {
+        const userDocRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists() && userDoc.data().packingTemplate) {
+          templateToUse = userDoc.data().packingTemplate;
+        }
+      }
+
       const batch = writeBatch(db);
       const packingRef = collection(db, `trips/${tripId}/packing`);
       
-      // Añadir cada ítem de defaultPackingList.json a la base de datos
-      defaultPackingList.forEach(item => {
+      templateToUse.forEach(item => {
         const docRef = doc(packingRef);
         batch.set(docRef, {
           name: item.name,
           category: item.category,
           packed: false,
-          quantity: item.quantity,
+          quantity: item.quantity || 1,
           createdAt: new Date()
         });
       });
 
       await batch.commit();
-      console.log("Plantilla base inyectada con éxito.");
+      console.log("Plantilla inyectada con éxito.");
     } catch (err) {
       console.error("Error seeding default list:", err);
+    }
+  },
+
+  saveUserTemplate: async (userId) => {
+    try {
+      const { getDoc, setDoc } = await import('firebase/firestore');
+      const items = get().items;
+      if (items.length === 0) return;
+      
+      const template = items.map(item => ({
+        name: item.name,
+        category: item.category,
+        quantity: item.quantity || 1
+      }));
+      
+      const userDocRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        await updateDoc(userDocRef, { packingTemplate: template });
+      } else {
+        await setDoc(userDocRef, { packingTemplate: template });
+      }
+      return true;
+    } catch (error) {
+      console.error("Error saving template:", error);
+      throw error;
     }
   },
 

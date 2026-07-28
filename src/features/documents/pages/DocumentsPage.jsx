@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { useDocumentStore } from '../../../store/documentStore';
 import { useItineraryStore } from '../../../store/itineraryStore';
-import { FileText, Plus, Trash2, UploadCloud, Sparkles, Loader2, Plane, UserSquare2 } from 'lucide-react';
+import { FileText, Plus, Trash2, UploadCloud, Sparkles, Loader2, Plane, UserSquare2, Lock } from 'lucide-react';
 import DocumentViewer from '../../../components/ui/DocumentViewer';
+import { useAuthStore } from '../../../store/authStore';
+import { usePremiumCheckout } from '../../../hooks/usePremiumCheckout';
 import { format } from 'date-fns';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app, db } from '../../../config/firebase';
@@ -12,6 +14,8 @@ import { Timestamp } from 'firebase/firestore';
 export default function DocumentsPage() {
   const { trip } = useOutletContext();
   const navigate = useNavigate();
+  const { profile } = useAuthStore();
+  const { startCheckout, isCheckoutLoading } = usePremiumCheckout();
   const { documents, subscribeToDocuments, addDocument, deleteDocument, updateDocument, isLoading } = useDocumentStore();
   const { addNode, updateNode } = useItineraryStore();
   
@@ -314,23 +318,38 @@ export default function DocumentsPage() {
 
       {activeTab === 'tickets' && documents.some(d => (d.type === 'tickets' || !d.type) && !d.aiAnalyzed) && (
         <div className="mb-8 flex justify-center">
-          <button
-            onClick={handleBatchAnalyze}
-            disabled={isBatchAnalyzing}
-            className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-indigo-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {isBatchAnalyzing ? (
-              <>
+          {profile?.tier === 'premium' ? (
+            <button
+              onClick={handleBatchAnalyze}
+              disabled={isBatchAnalyzing}
+              className="w-full md:w-auto bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-indigo-900/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isBatchAnalyzing ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Analizando documentos...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 text-yellow-300" />
+                  <span>Analizar Nuevos Documentos con IA</span>
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={startCheckout}
+              disabled={isCheckoutLoading}
+              className="w-full md:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isCheckoutLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Analizando documentos...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5 text-yellow-300" />
-                <span>Analizar Nuevos Documentos con IA</span>
-              </>
-            )}
-          </button>
+              ) : (
+                <Lock className="w-5 h-5" />
+              )}
+              <span>Actualizar a Premium para extraer datos con IA</span>
+            </button>
+          )}
         </div>
       )}
 

@@ -31,7 +31,8 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
     exchangeRate: '',
     isGroupMode: false,
     splitMembers: '',
-    categories: ''
+    categories: '',
+    defaultAlarmOffset: '1440' // 24 hours default
   });
 
   useEffect(() => {
@@ -54,7 +55,8 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
         exchangeRate: trip.exchangeRate || '',
         isGroupMode: trip.isGroupMode || false,
         splitMembers: trip.splitMembers ? trip.splitMembers.join(', ') : '',
-        categories: trip.categories ? trip.categories.join(', ') : 'Comida, Transporte, Ocio, Alojamiento, Vuelos, Gasolina, Supermercado, Otros'
+        categories: trip.categories ? trip.categories.join(', ') : 'Comida, Transporte, Ocio, Alojamiento, Vuelos, Gasolina, Supermercado, Otros',
+        defaultAlarmOffset: trip.defaultAlarmOffset !== undefined ? String(trip.defaultAlarmOffset) : '1440'
       });
     }
   }, [isOpen, trip]);
@@ -82,7 +84,8 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
         exchangeRate: formData.exchangeRate ? parseFloat(formData.exchangeRate) : null,
         isGroupMode: formData.isGroupMode,
         splitMembers: formData.splitMembers.split(',').map(s => s.trim()).filter(Boolean),
-        categories: formData.categories.split(',').map(s => s.trim()).filter(Boolean)
+        categories: formData.categories.split(',').map(s => s.trim()).filter(Boolean),
+        defaultAlarmOffset: parseInt(formData.defaultAlarmOffset, 10)
       };
 
       if (formData.startDate) {
@@ -194,6 +197,26 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
                     <ImageIcon className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
                     <input type="url" value={formData.coverImageUrl} onChange={e => setFormData({...formData, coverImageUrl: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-teal-500" placeholder="https://..." />
                   </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Alarma de Calendario por Defecto</label>
+                  <select 
+                    value={formData.defaultAlarmOffset} 
+                    onChange={e => setFormData({...formData, defaultAlarmOffset: e.target.value})} 
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-teal-500"
+                  >
+                    <option value="-1">Sin aviso</option>
+                    <option value="0">A la hora del evento</option>
+                    <option value="15">15 minutos antes</option>
+                    <option value="30">30 minutos antes</option>
+                    <option value="60">1 hora antes</option>
+                    <option value="120">2 horas antes</option>
+                    <option value="180">3 horas antes</option>
+                    <option value="1440">1 día antes (24 horas)</option>
+                    <option value="2880">2 días antes (48 horas)</option>
+                    <option value="10080">1 semana antes</option>
+                  </select>
+                  <p className="text-[10px] text-slate-500 mt-1">Esta alarma se aplicará por defecto al exportar los eventos al calendario del móvil.</p>
                 </div>
               </div>
             </section>

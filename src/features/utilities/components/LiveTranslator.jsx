@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Mic, Volume2, Loader2, StopCircle, Camera } from 'lucide-react';
 import { useCameraAI } from '../hooks/useCameraAI';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { auth } from '../../../config/firebase';
 
 export default function LiveTranslator() {
   const [inputText, setInputText] = useState('');
@@ -67,91 +69,76 @@ export default function LiveTranslator() {
     }
   };
 
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
   const startListening = async (langCode, direction) => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Tu navegador no soporta reconocimiento de voz nativo. Si estás en iOS, asegúrate de usar Safari.");
-      return;
-    }
-
-    // Solicitar permiso de micrófono explícitamente (soluciona bloqueos en iOS)
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-      }
-    } catch (err) {
-      alert("Permiso de micrófono denegado. Por favor, permítelo en los ajustes del navegador y recarga la página.");
-      return;
-    }
-
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort(); // Usar abort en lugar de stop para matar la instancia anterior sin disparar eventos
-      } catch (e) {
-        console.warn(e);
-      }
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = langCode;
-    recognition.interimResults = true;
-    
-    recognition.onstart = () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      
       setActiveMic(langCode);
       setInputText('');
       setTranslatedText('');
-      currentTextRef.current = '';
-    };
-    
-    recognition.onresult = (event) => {
-      let current = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        current += event.results[i][0].transcript;
-      }
-      currentTextRef.current = current;
-      setInputText(current);
-      
-      // Si el navegador decide que ha terminado la frase por sí solo (silencio prolongado)
-      if (event.results[0].isFinal) {
-         handleTranslate(current, direction);
-         setActiveMic(null);
-         recognition.stop();
-      }
-    };
-    
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error", event.error);
-      if (event.error === 'not-allowed') {
-        alert("El micrófono está bloqueado por el navegador. Revisa los permisos.");
-      }
-      setActiveMic(null);
-    };
-    
-    recognition.onend = () => {
-      setActiveMic(null);
-    };
+      setLastDirection(direction);
 
-    recognitionRef.current = recognition;
-    // Sobrescribimos el stopListening para que tenga acceso al direction y texto actual
-    recognitionRef.customStop = () => {
-      recognition.stop();
-      if (currentTextRef.current) {
-        handleTranslate(currentTextRef.current, direction);
-      }
-    };
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
 
-    try {
-      recognition.start();
-    } catch (e) {
-      console.error("Microphone start error", e);
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+        
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
+        setActiveMic(null);
+        
+        if (audioBlob.size === 0) return;
+
+        setInputText('Procesando audio...');
+        try {
+          // Convert Blob to Base64
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = async () => {
+            const base64data = reader.result.split(',')[1];
+            
+            const functions = getFunctions(auth.app, 'europe-west1');
+            const transcribeAudio = httpsCallable(functions, 'transcribeAudio');
+            
+            const result = await transcribeAudio({
+              base64Audio: base64data,
+              mimeType: audioBlob.type
+            });
+            
+            const transcribedText = result.data.text;
+            setInputText(transcribedText);
+            
+            if (transcribedText && transcribedText.trim() !== '') {
+              handleTranslate(transcribedText, direction);
+            }
+          };
+        } catch (error) {
+          console.error('Error al transcribir:', error);
+          alert('Hubo un error procesando tu audio.');
+          setInputText('');
+        }
+      };
+
+      mediaRecorder.start();
+    } catch (err) {
+      console.error("Error al acceder al micrófono:", err);
+      alert("Permiso de micrófono denegado. Por favor, permítelo en los ajustes del navegador.");
     }
   };
 
   const stopListening = () => {
-    if (recognitionRef.customStop) {
-      recognitionRef.customStop();
-    } else if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
     }
   };
 

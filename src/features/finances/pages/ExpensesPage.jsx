@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useExpenseStore } from '../../../store/expenseStore';
 import { useItineraryStore } from '../../../store/itineraryStore';
 import ExpenseModal from '../components/ExpenseModal';
-import { Plus, Receipt, PieChart, Users, ArrowRight, Plane, Hotel, CarFront, MapPin, Route, Settings } from 'lucide-react';
+import { Plus, Receipt, PieChart, Users, ArrowRight, Plane, Hotel, CarFront, MapPin, Route, Settings, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -142,6 +142,35 @@ export default function ExpensesPage() {
     setIsModalOpen(true);
   };
 
+  const exportToCSV = () => {
+    const headers = ['Fecha', 'Concepto', 'Categoría', 'Pagador', 'Para Quien', 'Importe', 'Moneda', 'Pagado'];
+    
+    const rows = unifiedExpenses.map(exp => {
+      const dateStr = exp.date ? format(exp.date.toDate ? exp.date.toDate() : new Date(exp.date), "dd/MM/yyyy") : '';
+      const splitBetweenStr = exp.splitBetween?.length > 0 ? exp.splitBetween.join(' y ') : 'Todos';
+      return [
+        dateStr,
+        `"${(exp.title || '').replace(/"/g, '""')}"`, // escapar comillas
+        exp.category || '',
+        exp.paidBy || '',
+        splitBetweenStr,
+        exp.amount.toFixed(2),
+        exp.currency || 'EUR',
+        exp.isPaid ? 'Sí' : 'No'
+      ].join(',');
+    });
+    
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Gastos_${trip.title.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const getIconForCategory = (cat) => {
     switch (cat?.toLowerCase()) {
       case 'flight': case 'vuelos': return <Plane className="w-4 h-4" />;
@@ -156,14 +185,25 @@ export default function ExpensesPage() {
   return (
     <div className="max-w-3xl mx-auto pb-24">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          💰 Finanzas
-        </h2>
-        {trip.isGroupMode && (
-          <span className="bg-indigo-500/20 text-indigo-300 text-xs font-bold px-3 py-1 rounded-full border border-indigo-500/30">
-            Modo Grupo
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+            💰 Finanzas
+          </h2>
+          {trip.isGroupMode && (
+            <span className="bg-indigo-500/20 text-indigo-300 text-xs font-bold px-3 py-1 rounded-full border border-indigo-500/30">
+              Modo Grupo
+            </span>
+          )}
+        </div>
+        
+        <button 
+          onClick={exportToCSV}
+          className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-teal-400 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors text-sm font-semibold"
+          title="Exportar a Excel (CSV)"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Exportar</span>
+        </button>
       </div>
 
       {/* Tabs Navigation */}

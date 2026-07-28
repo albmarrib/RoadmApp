@@ -143,50 +143,60 @@ export default function TimelineNode({ node, isLast, onClick }) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      const mins = prompt("¿Cuántos minutos antes quieres que suene la alarma? (ej. 15, 60, 1440 para un día)", "60");
-                      if (mins && !isNaN(mins)) {
-                        const alarmMins = parseInt(mins, 10);
-                        const end = endTime || new Date(startTime.getTime() + 60 * 60 * 1000);
-                        
-                        const startISO = startTime.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                        const endISO = end.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                        const nowISO = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                      const alarmMins = node.alarmOffset !== undefined ? parseInt(node.alarmOffset, 10) : 1440;
+                      const end = endTime || new Date(startTime.getTime() + 60 * 60 * 1000);
+                      
+                      const startISO = startTime.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                      const endISO = end.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                      const nowISO = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
-                        const icsData = [
-                          'BEGIN:VCALENDAR',
-                          'VERSION:2.0',
-                          'PRODID:-//RoadmApp//Itinerary//EN',
-                          'BEGIN:VEVENT',
-                          `UID:${node.id}@roadmapp.com`,
-                          `DTSTAMP:${nowISO}`,
-                          `DTSTART:${startISO}`,
-                          `DTEND:${endISO}`,
-                          `SUMMARY:${node.title}`,
-                          `DESCRIPTION:${node.notes || ''}`,
+                      let icsData = [
+                        'BEGIN:VCALENDAR',
+                        'VERSION:2.0',
+                        'PRODID:-//RoadmApp//Itinerary//EN',
+                        'BEGIN:VEVENT',
+                        `UID:${node.id}@roadmapp.com`,
+                        `DTSTAMP:${nowISO}`,
+                        `DTSTART:${startISO}`,
+                        `DTEND:${endISO}`,
+                        `SUMMARY:${node.title}`,
+                        `DESCRIPTION:${node.notes || ''}`
+                      ];
+
+                      if (alarmMins >= 0) {
+                        icsData = icsData.concat([
                           'BEGIN:VALARM',
                           `TRIGGER:-PT${alarmMins}M`,
                           'ACTION:DISPLAY',
                           `DESCRIPTION:Recordatorio de ${node.title}`,
                           'END:VALARM',
-                          'END:VEVENT',
-                          'END:VCALENDAR'
-                        ].join('\r\n');
-
-                        const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = `${node.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
+                          'BEGIN:VALARM',
+                          `TRIGGER:-PT${alarmMins}M`,
+                          'ACTION:AUDIO',
+                          'ATTACH;VALUE=URI:Chord',
+                          'END:VALARM'
+                        ]);
                       }
+
+                      icsData = icsData.concat([
+                        'END:VEVENT',
+                        'END:VCALENDAR'
+                      ]);
+
+                      const blob = new Blob([icsData.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `${node.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
                     }}
                     className="flex items-center gap-1.5 bg-orange-900/30 hover:bg-orange-900/50 text-orange-300 text-xs px-3 py-1.5 rounded-lg border border-orange-800/50 transition-colors mt-2"
                   >
                     <Clock size={14} className="text-orange-400" />
-                    Añadir Alarma ({format(startTime, "HH:mm")})
+                    Añadir al Calendario
                   </button>
                 </div>
               )}
