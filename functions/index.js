@@ -64,6 +64,13 @@ exports.analyzeDocument = onCall(
       const response = await fetch(fileUrl);
       if (!response.ok) throw new Error("No se pudo descargar el documento");
       
+      // Override mimeType with the actual content-type from the server response if available
+      let actualMimeType = mimeType;
+      const serverContentType = response.headers.get('content-type');
+      if (serverContentType && serverContentType !== 'application/octet-stream') {
+        actualMimeType = serverContentType.split(';')[0].trim();
+      }
+      
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const base64Data = buffer.toString("base64");
@@ -113,14 +120,14 @@ exports.analyzeDocument = onCall(
         }
       `;
       let parts = [{ text: prompt }];
-      if (mimeType === 'text/plain') {
+      if (actualMimeType.includes('text/plain') || actualMimeType.includes('message/rfc822')) {
         const textContent = buffer.toString('utf-8').substring(0, 30000); // Truncar a 30KB para ignorar attachments pesados en base64
         parts.push({ text: `\n\n--- INICIO DEL DOCUMENTO ---\n${textContent}\n--- FIN DEL DOCUMENTO ---` });
       } else {
         parts.push({
           inlineData: {
             data: base64Data,
-            mimeType: mimeType || "application/pdf",
+            mimeType: actualMimeType || "application/pdf",
           }
         });
       }
@@ -363,5 +370,137 @@ exports.stripeWebhook = onRequest(
     }
 
     res.json({received: true});
+  }
+);
+
+const { simpleParser } = require("mailparser");
+const { v4: uuidv4 } = require("uuid");
+
+exports.receiveEmailWebhook = onRequest(
+  {
+    region: "europe-west1",
+    cors: true,
+  },
+  async (req, res) => {
+    // 1. Verificación de seguridad
+    if (req.headers["x-roadmapp-token"] !== "roadmapp_secreto_seguro_2026") {
+      res.status(403).send("Forbidden");
+      return;
+    }
+
+    const senderEmail = req.headers["x-mail-from"];
+    const toEmail = req.headers["x-mail-to"];
+    
+    if (!senderEmail || !toEmail) {
+      res.status(400).send("Faltan headers");
+      return;
+    }
+
+    try {
+      const alias = toEmail.split("@")[0].toLowerCase().trim();
+
+      // Buscar al usuario por remitente
+      const usersRef = db.collection("users");
+      const q = usersRef.where("email", "==", senderEmail).limit(1);
+      const userSnap = await q.get();
+      
+      if (userSnap.empty) {
+        console.log(`Usuario desconocido: ${senderEmail}`);
+        res.status(404).send("User not found");
+        return;
+      }
+      const uid = userSnap.docs[0].id;
+
+      // Buscar el viaje del usuario
+      const tripsRef = db.collection("trips");
+      const tripsQ = tripsRef.where(`members.${uid}`, "in", ["owner", "editor", "viewer"]);
+      const tripsSnap = await tripsQ.get();
+      
+      let matchedTrip = null;
+      tripsSnap.forEach(doc => {
+        const tripData = doc.data();
+        const tripAlias = tripData.emailAlias ? tripData.emailAlias.toLowerCase() : "";
+        if (tripAlias === alias || (!matchedTrip && tripData.title.toLowerCase().includes(alias))) {
+          matchedTrip = { id: doc.id, ...tripData };
+        }
+      });
+
+      if (!matchedTrip) {
+        console.log(`Viaje no encontrado para alias: ${alias} del usuario ${uid}`);
+        res.status(404).send("Trip not found");
+        return;
+      }
+
+      // Parsear el email
+      const parsed = await simpleParser(req.rawBody);
+      const docsRef = db.collection(`trips/${matchedTrip.id}/documents`);
+      
+      let hasAttachments = false;
+      const bucket = storage.bucket();
+
+      if (parsed.attachments && parsed.attachments.length > 0) {
+        for (const att of parsed.attachments) {
+          hasAttachments = true;
+          const fileName = `trips/${matchedTrip.id}/email_${Date.now()}_${att.filename || 'adjunto'}`;
+          const file = bucket.file(fileName);
+          
+          const token = uuidv4();
+          await file.save(att.content, {
+            metadata: {
+              contentType: att.contentType,
+              metadata: {
+                firebaseStorageDownloadTokens: token
+              }
+            }
+          });
+          
+          const fileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(fileName)}?alt=media&token=${token}`;
+          
+          await docsRef.add({
+            title: att.filename || "Archivo Adjunto",
+            url: fileUrl,
+            type: "tickets",
+            aiAnalyzed: false,
+            createdAt: FieldValue.serverTimestamp(),
+            source: "email"
+          });
+        }
+      }
+
+      // Si no tiene adjuntos, guardamos el cuerpo del correo como documento
+      if (!hasAttachments && parsed.text) {
+        const textContent = parsed.text.trim();
+        if (textContent.length > 10) {
+          const fileName = `trips/${matchedTrip.id}/email_body_${Date.now()}.txt`;
+          const file = bucket.file(fileName);
+          const token = uuidv4();
+          
+          await file.save(Buffer.from(textContent, 'utf-8'), {
+            metadata: {
+              contentType: 'text/plain',
+              metadata: {
+                firebaseStorageDownloadTokens: token
+              }
+            }
+          });
+          
+          const fileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(fileName)}?alt=media&token=${token}`;
+          
+          await docsRef.add({
+            title: parsed.subject || "Cuerpo del Correo",
+            url: fileUrl,
+            type: "tickets",
+            aiAnalyzed: false,
+            createdAt: FieldValue.serverTimestamp(),
+            source: "email"
+          });
+        }
+      }
+
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("Error procesando email:", error);
+      res.status(500).send("Internal error");
+    }
   }
 );

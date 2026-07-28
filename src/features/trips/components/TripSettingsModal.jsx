@@ -22,6 +22,7 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
     agencyName: '',
     agencyPhone: '',
     agencyContact: '',
+    emailAlias: '',
     insuranceName: '',
     insurancePolicy: '',
     insurancePhone: '',
@@ -47,6 +48,7 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
         agencyName: trip.agencyName || '',
         agencyPhone: trip.agencyPhone || '',
         agencyContact: trip.agencyContact || '',
+        emailAlias: trip.emailAlias || '',
         insuranceName: trip.insuranceName || '',
         insurancePolicy: trip.insurancePolicy || '',
         insurancePhone: trip.insurancePhone || '',
@@ -76,6 +78,7 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
         agencyName: formData.agencyName,
         agencyPhone: formData.agencyPhone,
         agencyContact: formData.agencyContact,
+        emailAlias: formData.emailAlias ? formData.emailAlias.toLowerCase().trim() : '',
         insuranceName: formData.insuranceName,
         insurancePolicy: formData.insurancePolicy,
         insurancePhone: formData.insurancePhone,
@@ -162,6 +165,16 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-400 mb-1">Título del Viaje</label>
                   <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-teal-500" placeholder="Ej. Ruta por Japón" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-indigo-400 mb-1">Alias para Recepción de Emails</label>
+                  <div className="flex rounded-xl overflow-hidden border border-indigo-500/30">
+                    <input type="text" value={formData.emailAlias} onChange={e => setFormData({...formData, emailAlias: e.target.value.replace(/[^a-zA-Z0-9]/g, '')})} className="w-full bg-slate-950 px-4 py-2.5 text-white focus:outline-none focus:bg-slate-900" placeholder="Ej. japon2026" />
+                    <div className="bg-indigo-900/30 text-indigo-300 px-4 py-2.5 flex items-center text-sm font-mono whitespace-nowrap">
+                      @roadmapp.axonailabs.es
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Reenvía tus reservas a este email y se añadirán solas (solo letras y números, sin espacios).</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-1">Origen (Casa)</label>

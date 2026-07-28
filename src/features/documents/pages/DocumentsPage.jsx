@@ -85,10 +85,11 @@ export default function DocumentsPage() {
         try {
           if (doc.type === 'tickets' && !doc.aiAnalyzed) {
             let mimeType = 'application/pdf';
-            if (doc.fileName && doc.fileName.toLowerCase().endsWith('.png')) mimeType = 'image/png';
-            if (doc.fileName && (doc.fileName.toLowerCase().endsWith('.jpg') || doc.fileName.toLowerCase().endsWith('.jpeg'))) mimeType = 'image/jpeg';
-            if (doc.fileName && doc.fileName.toLowerCase().endsWith('.webp')) mimeType = 'image/webp';
-            if (doc.fileName && (doc.fileName.toLowerCase().endsWith('.eml') || doc.fileName.toLowerCase().endsWith('.txt'))) mimeType = 'text/plain';
+            const nameToCheck = (doc.fileName || doc.title || doc.url || '').toLowerCase();
+            if (nameToCheck.includes('.png')) mimeType = 'image/png';
+            else if (nameToCheck.includes('.jpg') || nameToCheck.includes('.jpeg')) mimeType = 'image/jpeg';
+            else if (nameToCheck.includes('.webp')) mimeType = 'image/webp';
+            else if (nameToCheck.includes('.eml') || nameToCheck.includes('.txt')) mimeType = 'text/plain';
 
             const result = await analyzeDocument({ fileUrl: doc.url, mimeType: mimeType });
             
@@ -315,6 +316,28 @@ export default function DocumentsPage() {
           <UserSquare2 className="w-4 h-4" /> Personales
         </button>
       </div>
+
+      {activeTab === 'tickets' && (
+        <div className="mb-6 bg-indigo-900/20 border border-indigo-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-500/20 rounded-xl text-indigo-400">
+              <Plane className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-sm">Buzón Inteligente</h3>
+              {trip.emailAlias ? (
+                <p className="text-slate-400 text-xs mt-0.5">
+                  Reenvía tus reservas a <span className="text-indigo-300 font-mono font-bold bg-indigo-500/10 px-1 rounded">{trip.emailAlias}@roadmapp.axonailabs.es</span>
+                </p>
+              ) : (
+                <p className="text-slate-400 text-xs mt-0.5">
+                  Configura un alias en los ajustes del viaje para reenviar reservas por email.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'tickets' && documents.some(d => (d.type === 'tickets' || !d.type) && !d.aiAnalyzed) && (
         <div className="mb-8 flex justify-center">
