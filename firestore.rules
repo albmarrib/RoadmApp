@@ -13,7 +13,9 @@ service cloud.firestore {
     match /trips/{tripId} {
       // Bloqueamos la lectura pública (ahora el join se hace por Cloud Function)
       allow create: if isAuthenticated();
-      allow read, update, delete: if isAuthenticated() && (request.auth.uid in resource.data.members);
+      // Regla ajustada para coincidir EXACTAMENTE con la consulta del frontend:
+      // where(`members.${userId}`, 'in', ['owner', 'editor', 'viewer'])
+      allow read, update, delete: if isAuthenticated() && (resource.data.members[request.auth.uid] in ['owner', 'editor', 'viewer']);
       
       match /{subcollection}/{docId} {
         allow read, write: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.members);
