@@ -595,3 +595,48 @@ exports.readDocumentText = onCall({ region: "europe-west1", memory: "128Mi" }, a
     throw new HttpsError("internal", error.message);
   }
 });
+
+// --- FUNCIÓN 8: UNIRSE A VIAJE POR CÓDIGO (SEGURIDAD BACKEND) ---
+exports.joinTripByCode = onCall({ region: "europe-west1", memory: "128Mi" }, async (request) => {
+  try {
+    // 1. Verificar que el usuario está autenticado
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Debes iniciar sesión para unirte a un viaje.");
+    }
+    const userId = request.auth.uid;
+    const { inviteCode } = request.data;
+    
+    if (!inviteCode) {
+      throw new HttpsError("invalid-argument", "Se requiere un código de invitación.");
+    }
+    
+    const codeUpper = inviteCode.toUpperCase();
+    
+    // 2. Buscar el viaje usando el Admin SDK (bypasa reglas de Firestore)
+    const tripsRef = db.collection('trips');
+    const snapshot = await tripsRef.where('inviteCode', '==', codeUpper).limit(1).get();
+    
+    if (snapshot.empty) {
+      throw new HttpsError("not-found", "Código de invitación no válido o viaje no encontrado.");
+    }
+    
+    const tripDoc = snapshot.docs[0];
+    const tripData = tripDoc.data();
+    
+    // 3. Si ya es miembro, devolver éxito sin modificar
+    if (tripData.members && tripData.members[userId]) {
+      return { success: true, tripId: tripDoc.id };
+    }
+    
+    // 4. Añadir como miembro
+    const updatedMembers = { ...tripData.members, [userId]: 'editor' };
+    await tripDoc.ref.update({ members: updatedMembers });
+    
+    return { success: true, tripId: tripDoc.id };
+    
+  } catch (error) {
+    console.error("Error en joinTripByCode:", error);
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError("internal", "Error procesando la invitación.");
+  }
+});

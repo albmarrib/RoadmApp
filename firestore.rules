@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    match /trips/{tripId} {
+      // Bloqueamos la lectura pública (ahora el join se hace por Cloud Function)
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAuthenticated() && (request.auth.uid in resource.data.members);
+      
+      match /{subcollection}/{docId} {
+        allow read, write: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.members);
+      }
+    }
+  }
+}

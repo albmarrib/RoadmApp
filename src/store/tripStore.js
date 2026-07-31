@@ -114,38 +114,25 @@ export const useTripStore = create((set, get) => ({
   joinTripByCode: async (inviteCode, userId) => {
     set({ isLoading: true, error: null });
     try {
-      const { query, where, getDocs } = await import('firebase/firestore');
-      const tripsRef = collection(db, 'trips');
+      const { app } = await import('../config/firebase');
+      const { getFunctions, httpsCallable } = await import('firebase/functions');
       
-      const q = query(tripsRef, where('inviteCode', '==', inviteCode.toUpperCase()));
-      const snapshot = await getDocs(q);
+      const functions = getFunctions(app, 'europe-west1');
+      const joinTripFn = httpsCallable(functions, 'joinTripByCode');
       
-      if (snapshot.empty) {
-        throw new Error("Código de invitación no válido o viaje no encontrado.");
-      }
-      
-      const tripDoc = snapshot.docs[0];
-      const tripData = tripDoc.data();
-      
-      // Si ya es miembro, simplemente terminar
-      if (tripData.members && tripData.members[userId]) {
-        set({ isLoading: false });
-        return tripDoc.id;
-      }
-      
-      // Añadir al usuario como editor (o el rol que consideremos por defecto)
-      const updatedMembers = { ...tripData.members, [userId]: 'editor' };
-      
-      await updateDoc(tripDoc.ref, { members: updatedMembers });
+      const result = await joinTripFn({ inviteCode });
+      const tripId = result.data.tripId;
       
       // Recargar la lista de viajes para incluir el nuevo
-      get().fetchMyTrips(userId);
+      await get().fetchMyTrips(userId);
       
-      return tripDoc.id;
+      return tripId;
     } catch (err) {
       console.error("Error joining trip:", err);
-      set({ error: err.message, isLoading: false });
-      throw err;
+      // Extraer mensaje amigable si viene de Firebase Functions
+      const errorMessage = err.message || "Error al unirse al viaje.";
+      set({ error: errorMessage, isLoading: false });
+      throw new Error(errorMessage);
     }
   },
 
