@@ -21,8 +21,10 @@ export default function CreateTripModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const isStandard = profile?.tier === 'standard' || !profile?.tier;
-  const hasReachedLimit = isStandard && trips.length >= 2;
+  const userTier = profile?.tier || 'free';
+  const isFree = userTier === 'free';
+  const isStandard = userTier === 'standard';
+  const hasReachedLimit = (isFree && trips.length >= 1) || (isStandard && trips.length >= 2);
 
   const processFile = (file) => {
     if (file && file.type.startsWith('image/')) {
@@ -102,12 +104,25 @@ export default function CreateTripModal({ isOpen, onClose }) {
               <Plane className="w-8 h-8 text-amber-500 mx-auto" />
             </div>
             <h3 className="text-xl font-bold text-white">Límite Alcanzado</h3>
-            <p className="text-sm text-slate-400">
-              La versión Standard te permite tener un máximo de 2 viajes activos al mismo tiempo.
-            </p>
-            <p className="text-sm text-slate-400">
-              Hazte Premium para crear viajes ilimitados o elimina un viaje existente para hacer espacio.
-            </p>
+            {isFree ? (
+              <>
+                <p className="text-sm text-slate-400">
+                  Prueba gratuita, crea 1 viaje y sube hasta 10 documentos.
+                </p>
+                <p className="text-sm text-slate-400">
+                  Actualiza a la versión Standard o Premium para crear más viajes.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-slate-400">
+                  La versión Standard te permite tener un máximo de 2 viajes activos al mismo tiempo.
+                </p>
+                <p className="text-sm text-slate-400">
+                  Hazte Premium para crear viajes ilimitados o elimina un viaje existente para hacer espacio.
+                </p>
+              </>
+            )}
             <div className="pt-6">
               <button
                 type="button"

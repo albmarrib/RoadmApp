@@ -95,8 +95,10 @@ export default function DashboardPage() {
           return filterType === 'active' ? !isPast : isPast;
         });
 
-        // Check if user is standard and identify which trips to lock (only keep 2 most recent unlocked)
-        const isStandard = profile?.tier === 'standard' || !profile?.tier;
+        // Check if user is free or standard and identify which trips to lock
+        const userTier = profile?.tier || 'free';
+        const isFree = userTier === 'free';
+        const isStandard = userTier === 'standard';
         
         // Sort trips by createdAt descending to find the newest ones across all trips
         const sortedAllTrips = [...trips].sort((a, b) => {
@@ -105,14 +107,18 @@ export default function DashboardPage() {
           return dateB - dateA;
         });
 
-        // The top 2 are unlocked, the rest are locked if standard
-        const unlockedTripIds = new Set(sortedAllTrips.slice(0, 2).map(t => t.id));
+        // Determine unlocked trips based on tier
+        let allowedTripsCount = 999;
+        if (isFree) allowedTripsCount = 1;
+        else if (isStandard) allowedTripsCount = 2;
+
+        const unlockedTripIds = new Set(sortedAllTrips.slice(0, allowedTripsCount).map(t => t.id));
 
         if (filteredTrips.length > 0) {
           return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredTrips.map((trip, idx) => {
-                const isLocked = isStandard && !unlockedTripIds.has(trip.id);
+                const isLocked = (isFree || isStandard) && !unlockedTripIds.has(trip.id);
                 return (
                   <TripCard 
                     key={trip.id} 

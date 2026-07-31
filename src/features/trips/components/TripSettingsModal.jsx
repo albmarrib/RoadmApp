@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, ShieldAlert, Briefcase, MapPin, Calendar, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { useTripStore } from '../../../store/tripStore';
+import { useAuthStore } from '../../../store/authStore';
 import { Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
 export default function TripSettingsModal({ trip, isOpen, onClose }) {
   const { updateTrip, deleteTrip } = useTripStore();
+  const { profile } = useAuthStore();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -342,11 +344,20 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
             
             <div className="pt-6 mt-6 border-t border-red-500/20">
               <h3 className="text-sm font-bold text-red-500 uppercase tracking-wider mb-4">Zona de Peligro</h3>
+              
+              {profile?.tier === 'free' ? (
+                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl mb-4">
+                  <p className="text-sm text-red-400 text-center">
+                    En la versión de prueba no es posible eliminar viajes. Actualiza a Standard o Premium para desbloquear la gestión completa.
+                  </p>
+                </div>
+              ) : null}
+
               <button 
                 type="button" 
                 onClick={handleDeleteTrip}
-                disabled={isDeleting}
-                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                disabled={isDeleting || profile?.tier === 'free'}
+                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-5 h-5" />
                 {isDeleting ? 'Eliminando...' : 'Eliminar Viaje'}

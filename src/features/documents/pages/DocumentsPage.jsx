@@ -37,6 +37,22 @@ export default function DocumentsPage() {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
 
+    const userTier = profile?.tier || 'free';
+    const currentDocCount = documents.length;
+    const requestedUploadCount = files.length;
+    
+    if (userTier === 'free' && (currentDocCount + requestedUploadCount > 10)) {
+      alert(`Prueba gratuita: solo puedes subir hasta 10 documentos por viaje (tienes ${currentDocCount}). Actualiza a Standard o Premium para subir más.`);
+      e.target.value = '';
+      return;
+    }
+    
+    if (userTier === 'standard' && (currentDocCount + requestedUploadCount > 50)) {
+      alert(`Límite Standard alcanzado: máximo 50 documentos por viaje (tienes ${currentDocCount}). Actualiza a Premium para subidas ilimitadas.`);
+      e.target.value = '';
+      return;
+    }
+
     setIsUploading(true);
 
     for (const file of files) {
