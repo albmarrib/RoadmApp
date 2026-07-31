@@ -67,7 +67,26 @@ export default function DocumentsPage() {
       }
 
       try {
-        await addDocument(trip.id, file.name, file, activeTab);
+        let fileToUpload = file;
+        let title = file.name;
+
+        if (file.name.toLowerCase().endsWith('.eml')) {
+          try {
+            const PostalMime = (await import('postal-mime')).default;
+            const parser = new PostalMime();
+            const email = await parser.parse(file);
+            
+            const content = email.html || email.text || 'Sin contenido';
+            title = email.subject || file.name.replace('.eml', '.html');
+            const newFileName = title.replace(/[^a-zA-Z0-9_.-]/g, '_') + '.html';
+            
+            fileToUpload = new File([content], newFileName, { type: 'text/html' });
+          } catch (parseErr) {
+            console.error("Error parseando .eml en frontend:", parseErr);
+          }
+        }
+
+        await addDocument(trip.id, title, fileToUpload, activeTab);
       } catch (err) {
         alert(`Error subiendo "${file.name}": ` + err.message);
       }
@@ -87,6 +106,7 @@ export default function DocumentsPage() {
     setIsBatchAnalyzing(true);
     let eventsCreated = 0;
     let eventsMerged = 0;
+    let mergedNames = [];
     
     try {
       const functions = getFunctions(app, 'europe-west1');
@@ -123,7 +143,21 @@ export default function DocumentsPage() {
                     const existingTime = en.startTime?.toMillis ? en.startTime.toMillis() : new Date(en.startTime).getTime();
                     const newStartTime = new Date(ev.startTime).getTime();
                     const diffHours = Math.abs(existingTime - newStartTime) / (1000 * 60 * 60);
-                    return diffHours < 12;
+                    
+                    const getWords = (str) => (str || '').toLowerCase().split(/[^a-z0-9áéíóúñ]+/).filter(w => w.length >= 4);
+                    const existingWords = getWords(en.title);
+                    const newWords = getWords(ev.title);
+                    const sharesWords = existingWords.some(w => newWords.includes(w));
+
+                    if (!sharesWords) return false; // Nunca fusionar si los nombres no tienen nada que ver
+
+                    if (newType === 'accommodation' || newType === 'car_rental') {
+                      return diffHours < 24; // Mismo día y mismo nombre
+                    } else if (newType === 'flight' || newType === 'drive') {
+                      return diffHours < 6; // Menos de 6h y mismo nombre
+                    } else {
+                      return diffHours < 4; // Menos de 4h y mismo nombre
+                    }
                   });
 
                   if (duplicateNode) {
@@ -178,6 +212,7 @@ export default function DocumentsPage() {
                     // Actualizar en la caché para las siguientes pasadas
                     Object.assign(duplicateNode, updateData);
                     eventsMerged++;
+                    mergedNames.push(`"${ev.title}" se unió a "${duplicateNode.title}"`);
                   }
                 }
                 
@@ -272,6 +307,7 @@ export default function DocumentsPage() {
       if (eventsCreated > 0 || eventsMerged > 0) {
         let msg = `Análisis completado.\nSe crearon ${eventsCreated} eventos nuevos y se fusionaron ${eventsMerged} con eventos existentes.`;
         if (eventsMerged > 0) {
+          msg += `\n\nDetalles de fusión:\n` + mergedNames.map(m => `- ${m}`).join('\n');
           msg += `\n\n⚠️ IMPORTANTE: Al fusionar eventos, se han sumado los precios automáticamente. Revisa los eventos con la etiqueta 'REVISAR PRECIO' para asegurarte de que el importe total es correcto y no está duplicado.`;
         }
         alert(msg);
