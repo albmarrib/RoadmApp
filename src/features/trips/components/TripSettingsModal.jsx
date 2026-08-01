@@ -170,9 +170,9 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-indigo-400 mb-1">Alias para Recepción de Emails</label>
-                  <div className="flex rounded-xl overflow-hidden border border-indigo-500/30">
+                  <div className="flex flex-col sm:flex-row rounded-xl overflow-hidden border border-indigo-500/30">
                     <input type="text" value={formData.emailAlias} onChange={e => setFormData({...formData, emailAlias: e.target.value.replace(/[^a-zA-Z0-9]/g, '')})} className="w-full bg-slate-950 px-4 py-2.5 text-white focus:outline-none focus:bg-slate-900" placeholder="Ej. japon2026" />
-                    <div className="bg-indigo-900/30 text-indigo-300 px-4 py-2.5 flex items-center text-sm font-mono whitespace-nowrap">
+                    <div className="bg-indigo-900/30 text-indigo-300 px-4 py-2.5 flex items-center justify-center sm:justify-start text-sm font-mono whitespace-nowrap border-t sm:border-t-0 border-indigo-500/30">
                       @roadmapp.axonailabs.es
                     </div>
                   </div>
