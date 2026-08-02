@@ -224,9 +224,11 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
     setLocationResults([]);
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const validFiles = [];
-    Array.from(e.target.files).forEach(file => {
+    const files = Array.from(e.target.files);
+    
+    for (const file of files) {
       const isFakeDriveFile = 
         file.name.endsWith('.gdoc') || file.name.endsWith('.desktop') || 
         file.name.endsWith('.url') || file.name.endsWith('.gsheet') ||
@@ -234,13 +236,35 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         
       if (isFakeDriveFile) {
         alert(`Error con "${file.name}": El sistema nos indica que este archivo está vacío o es un "enlace de nube" (como Google Drive), no el documento físico.\n\nPor favor, descarga el archivo directamente desde tu navegador a tu dispositivo e inténtalo de nuevo para asegurar que esté disponible sin conexión.`);
-        return;
+        continue;
       }
-      validFiles.push(file);
-    });
-    if (validFiles.length > 0) {
-      setNewFiles([...newFiles, ...validFiles]);
+
+      let fileToUpload = file;
+
+      if (file.name.toLowerCase().endsWith('.eml')) {
+        try {
+          const PostalMime = (await import('postal-mime')).default;
+          const parser = new PostalMime();
+          const email = await parser.parse(file);
+          
+          const content = email.html || email.text || 'Sin contenido';
+          const title = email.subject || file.name.replace('.eml', '.html');
+          const newFileName = title.replace(/[^a-zA-Z0-9_.-]/g, '_') + '.html';
+          
+          fileToUpload = new File([content], newFileName, { type: 'text/html' });
+        } catch (parseErr) {
+          console.error("Error parseando .eml en frontend:", parseErr);
+        }
+      }
+      
+      validFiles.push(fileToUpload);
     }
+
+    if (validFiles.length > 0) {
+      setNewFiles(prev => [...prev, ...validFiles]);
+    }
+
+    e.target.value = '';
   };
 
   const removeNewFile = (index) => setNewFiles(newFiles.filter((_, i) => i !== index));
