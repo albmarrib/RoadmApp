@@ -76,7 +76,25 @@ export default function DocumentsPage() {
             const parser = new PostalMime();
             const email = await parser.parse(file);
             
-            const content = email.html || email.text || 'Sin contenido';
+            let content = email.html || email.text || 'Sin contenido';
+            
+            if (email.html && email.attachments && email.attachments.length > 0) {
+              for (const att of email.attachments) {
+                if (att.contentId && att.content) {
+                  const cid = att.contentId.replace(/^</, '').replace(/>$/, '');
+                  const dataUrl = await new Promise((resolve, reject) => {
+                    const blob = new Blob([att.content], { type: att.mimeType });
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                  });
+                  const cidRegex = new RegExp(`cid:${cid}`, 'gi');
+                  content = content.replace(cidRegex, dataUrl);
+                }
+              }
+            }
+
             title = email.subject || file.name.replace('.eml', '.html');
             const newFileName = title.replace(/[^a-zA-Z0-9_.-]/g, '_') + '.html';
             
