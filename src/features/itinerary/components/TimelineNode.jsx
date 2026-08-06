@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Plane, Hotel, Car, MapPin, Paperclip, Clock, CarFront, ChevronDown, ChevronUp, Phone, MessageCircle, Mail, User, Route, Edit3, Globe } from 'lucide-react';
+import { Plane, Hotel, Car, MapPin, Paperclip, Clock, CarFront, ChevronDown, ChevronUp, Phone, MessageCircle, Mail, User, Route, Edit3, Globe, AlertTriangle, CheckCircle, Headphones } from 'lucide-react';
+import { useItineraryStore } from '../../../store/itineraryStore';
 import DocumentViewer from '../../../components/ui/DocumentViewer';
 
 const getIcon = (type) => {
@@ -13,10 +14,12 @@ const getIcon = (type) => {
   }
 };
 
-export default function TimelineNode({ node, isLast, onClick }) {
+export default function TimelineNode({ node, isLast, onClick, tripId }) {
+  const { updateNode } = useItineraryStore();
   const [viewerUrl, setViewerUrl] = useState(null);
   const [viewerName, setViewerName] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
   
   const startTime = node.startTime?.toDate();
   const endTime = node.endTime?.toDate();
@@ -37,6 +40,23 @@ export default function TimelineNode({ node, isLast, onClick }) {
     setIsExpanded(!isExpanded);
   };
 
+  const handleResolveAction = async (e) => {
+    e.stopPropagation();
+    if (!tripId || !node.id) return;
+    
+    setIsResolving(true);
+    try {
+      await updateNode(tripId, node.id, {
+        hasPendingAction: false,
+        pendingActionText: ''
+      });
+    } catch (err) {
+      alert("Error al resolver la tarea: " + err.message);
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
   return (
     <div className="w-full relative group mb-2">
       {/* Tarjeta de contenido */}
@@ -52,10 +72,17 @@ export default function TimelineNode({ node, isLast, onClick }) {
               <Icon className={`w-5 h-5 ${color}`} />
             </div>
 
-            {/* Título */}
-            <h4 className="text-base font-bold text-white leading-tight truncate col-start-2 row-start-1 self-center sm:self-end pt-0 sm:pt-0.5">
-              {node.title}
-            </h4>
+            {/* Título y Alerta */}
+            <div className="col-start-2 row-start-1 self-center sm:self-end pt-0 sm:pt-0.5 min-w-0 flex items-center gap-2 pr-1">
+              <h4 className="text-base font-bold text-white leading-tight truncate">
+                {node.title}
+              </h4>
+              {node.hasPendingAction && (
+                <span className="flex items-center justify-center shrink-0 w-5 h-5 bg-red-500/20 rounded-full animate-pulse">
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                </span>
+              )}
+            </div>
 
             {/* Chevron */}
             <div 
@@ -100,6 +127,31 @@ export default function TimelineNode({ node, isLast, onClick }) {
                 <Edit3 className="w-4 h-4" />
                 <span>Editar Evento</span>
               </button>
+
+              {/* Acción Pendiente */}
+              {node.hasPendingAction && (
+                <div className="bg-red-950/40 border border-red-500/30 p-4 rounded-xl relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-red-400">Acción Requerida</p>
+                      <p className="text-sm text-slate-300 mt-1 whitespace-pre-wrap">{node.pendingActionText || "Tarea pendiente sin detallar."}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <button 
+                      onClick={handleResolveAction}
+                      disabled={isResolving}
+                      className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shadow-lg"
+                    >
+                      <CheckCircle className="w-4 h-4" /> {isResolving ? 'Resolviendo...' : 'Marcar como Resuelto'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+
 
               {/* Información de Rutas */}
               {node.type === 'drive' && node.routeOrigin && node.routeDestination && (
@@ -218,10 +270,10 @@ export default function TimelineNode({ node, isLast, onClick }) {
                 </a>
               )}
 
-              {/* Adjuntos */}
-              {node.attachments && node.attachments.length > 0 && (
+              {/* Adjuntos (Exceptuando los audios que ya se muestran en notas) */}
+              {node.attachments && node.attachments.filter(a => !(a.name.endsWith('.webm') || a.name.endsWith('.mp4') || a.name.endsWith('.mp3'))).length > 0 && (
                 <div className="flex gap-2 flex-wrap">
-                  {node.attachments.map((att, i) => (
+                  {node.attachments.filter(a => !(a.name.endsWith('.webm') || a.name.endsWith('.mp4') || a.name.endsWith('.mp3'))).map((att, i) => (
                     <button 
                       key={i} 
                       onClick={() => { setViewerUrl(att.url); setViewerName(att.name); }}

@@ -238,6 +238,7 @@ export default function ItineraryPage() {
                           node={node} 
                           isLast={index === groupedNodes[dateStr].length - 1} 
                           onClick={openEditModal}
+                          tripId={trip?.id}
                         />
                       ))}
                     </div>

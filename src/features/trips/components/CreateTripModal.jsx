@@ -3,7 +3,7 @@ import { useTripStore } from '../../../store/tripStore';
 import { useAuthStore } from '../../../store/authStore';
 import { useOnboardingStore } from '../../../store/onboardingStore';
 import { useNavigate } from 'react-router-dom';
-import { X, Plane, MapPin, Calendar, Image as ImageIcon, UploadCloud, ChevronRight, ChevronLeft, ShieldAlert, Briefcase, Mail, CloudDownload, Printer, Sparkles } from 'lucide-react';
+import { X, Plane, MapPin, Calendar, Image as ImageIcon, UploadCloud, ChevronRight, ChevronLeft, ShieldAlert, Briefcase, Mail, CloudDownload, Printer, Sparkles, Smartphone, Download } from 'lucide-react';
 import { Timestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -84,13 +84,39 @@ export default function CreateTripModal({ isOpen, onClose }) {
   // --- RENDERS DE PASOS ---
 
   const renderStep0 = () => (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="text-center space-y-6 py-4">
-      <div className="w-20 h-20 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Sparkles className="w-10 h-10 text-teal-400" />
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="text-left space-y-5 py-2">
+      <div className="flex items-center gap-4 mb-2">
+        <div className="w-14 h-14 bg-teal-500/20 rounded-full flex items-center justify-center shrink-0">
+          <Smartphone className="w-7 h-7 text-teal-400" />
+        </div>
+        <div>
+          <h3 className="text-xl font-bold text-white leading-tight">¿Ya tienes la App instalada?</h3>
+          <p className="text-sm text-teal-400 font-medium mt-1">Mejora tu experiencia al 100%</p>
+        </div>
       </div>
-      <h3 className="text-2xl font-bold text-white">¡Hola! Soy tu asistente de viaje</h3>
-      <p className="text-slate-400 text-lg">
-        Voy a guiarte paso a paso para configurar tu nueva aventura. ¿Empezamos?
+      
+      <p className="text-slate-300 text-sm">
+        Para disfrutar de RoadmApp sin conexión a internet y tener un acceso rápido, te recomendamos guardar esta página como una App nativa en tu teléfono:
+      </p>
+
+      <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-4">
+        <div>
+          <h4 className="font-bold text-slate-200 text-sm flex items-center gap-2 mb-1">
+            <span className="text-xl">🍏</span> En iPhone (iOS)
+          </h4>
+          <p className="text-xs text-slate-400">Toca el botón <span className="inline-block border border-slate-600 rounded px-1">Compartir</span> en la barra de Safari y selecciona <strong>"Añadir a la pantalla de inicio"</strong>.</p>
+        </div>
+        <div className="h-px bg-slate-800"></div>
+        <div>
+          <h4 className="font-bold text-slate-200 text-sm flex items-center gap-2 mb-1">
+            <span className="text-xl">🤖</span> En Android
+          </h4>
+          <p className="text-xs text-slate-400">Toca el menú de opciones <span className="inline-block border border-slate-600 rounded px-1">⋮</span> de Chrome y selecciona <strong>"Añadir a la pantalla de inicio"</strong> o "Instalar Aplicación".</p>
+        </div>
+      </div>
+
+      <p className="text-slate-400 text-xs text-center italic mt-4">
+        Si ya lo has hecho o prefieres seguir en el navegador, pulsa en Continuar.
       </p>
     </motion.div>
   );

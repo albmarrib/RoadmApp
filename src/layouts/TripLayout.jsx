@@ -1,9 +1,10 @@
 import { Outlet, useParams, Link, useLocation } from 'react-router-dom';
-import { Map, CalendarDays, Luggage, Wallet, ArrowLeft, FileText, CloudDownload, Loader2, Settings, Printer, Compass } from 'lucide-react';
+import { Map, CalendarDays, Luggage, Wallet, ArrowLeft, FileText, CloudDownload, Loader2, Settings, Printer, Compass, ShieldAlert } from 'lucide-react';
 import { useTripStore } from '../store/tripStore';
 import { useAuthStore } from '../store/authStore';
 import { useEffect, useState } from 'react';
 import TripSettingsModal from '../features/trips/components/TripSettingsModal';
+import TripRequirementsModal from '../features/trips/components/TripRequirementsModal';
 import PrintableItinerary from '../features/itinerary/components/PrintableItinerary';
 import DualClock from '../features/utilities/components/DualClock';
 import html2pdf from 'html2pdf.js';
@@ -15,6 +16,7 @@ export default function TripLayout() {
   const location = useLocation();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isRequirementsOpen, setIsRequirementsOpen] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   useEffect(() => {
@@ -210,6 +212,13 @@ export default function TripLayout() {
               {isGeneratingPDF ? <Loader2 className="w-5 h-5 animate-spin" /> : <Printer className="w-5 h-5" />}
             </button>
             <button 
+              onClick={() => setIsRequirementsOpen(true)}
+              className="p-2 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-full transition-colors"
+              title="Requisitos y Seguridad"
+            >
+              <ShieldAlert className="w-5 h-5" />
+            </button>
+            <button 
               onClick={() => setIsSettingsOpen(true)}
               className="p-2 text-slate-400 hover:text-teal-400 hover:bg-slate-800 rounded-full transition-colors"
               title="Configuración del Viaje y Contactos"
@@ -279,6 +288,11 @@ export default function TripLayout() {
         trip={trip} 
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)} 
+      />
+      <TripRequirementsModal 
+        trip={trip} 
+        isOpen={isRequirementsOpen} 
+        onClose={() => setIsRequirementsOpen(false)} 
       />
     </div>
     <PrintableItinerary trip={trip} />

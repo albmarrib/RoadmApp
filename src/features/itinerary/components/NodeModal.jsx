@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, UploadCloud, Plane, Hotel, Car, MapPin, Trash2, File as FileIcon, XCircle, Search, CarFront, Phone, MessageCircle, Mail, User, Route } from 'lucide-react';
+import { X, UploadCloud, Plane, Hotel, Car, MapPin, Trash2, File as FileIcon, XCircle, Search, CarFront, Phone, MessageCircle, Mail, User, Route, Mic, Square, AlertTriangle, CheckCircle, Lock, Loader2 } from 'lucide-react';
 import { Timestamp } from 'firebase/firestore';
 import { useItineraryStore } from '../../../store/itineraryStore';
 import { useTripStore } from '../../../store/tripStore';
+import { useAuthStore } from '../../../store/authStore';
+import { usePremiumCheckout } from '../../../hooks/usePremiumCheckout';
 import { format } from 'date-fns';
 import DocumentViewer from '../../../components/ui/DocumentViewer';
 
@@ -13,6 +15,17 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
   const currentTrip = trips.find(t => t.id === tripId);
   const defaultAlarm = currentTrip?.defaultAlarmOffset !== undefined ? currentTrip.defaultAlarmOffset : 1440;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { profile } = useAuthStore();
+  const isPremium = profile?.tier === 'premium';
+  const { startCheckout, isCheckoutLoading } = usePremiumCheckout();
+
+  // Audio Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -36,7 +49,10 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
     fuelConsumption: '',
     fuelPrice: '',
     isPaid: true,
-    alarmOffset: defaultAlarm
+    alarmOffset: defaultAlarm,
+    hasPendingAction: false,
+    pendingActionText: '',
+    personalNotes: ''
   });
   const [newFiles, setNewFiles] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
@@ -77,7 +93,10 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         fuelConsumption: editingNode.fuelConsumption || '',
         fuelPrice: editingNode.fuelPrice || '',
         isPaid: editingNode.isPaid !== false,
-        alarmOffset: editingNode.alarmOffset !== undefined ? editingNode.alarmOffset : defaultAlarm
+        alarmOffset: editingNode.alarmOffset !== undefined ? editingNode.alarmOffset : defaultAlarm,
+        hasPendingAction: editingNode.hasPendingAction || false,
+        pendingActionText: editingNode.pendingActionText || '',
+        personalNotes: editingNode.personalNotes || ''
       });
       setExistingAttachments(editingNode.attachments || []);
       setNewFiles([]);
@@ -101,7 +120,7 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         cost: '', currency: 'EUR', notes: '', externalUrl: '',
         contactPhone: '', contactWhatsapp: '', contactEmail: '', contactName: '',
         routeOrigin: '', routeDestination: '', routeMode: 'driving', routeDistanceKm: '', fuelConsumption: '', fuelPrice: '',
-        isPaid: true, alarmOffset: defaultAlarm
+        isPaid: true, alarmOffset: defaultAlarm, hasPendingAction: false, pendingActionText: '', personalNotes: ''
       });
       setExistingAttachments([]);
       setNewFiles([]);
@@ -113,6 +132,57 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
   }, [isOpen, editingNode]);
 
   if (!isOpen) return null;
+
+  const startRecording = async () => {
+    if (!isPremium) {
+      if (confirm("La grabación de notas de voz es una función Premium. ¿Quieres mejorar tu plan ahora?")) {
+        startCheckout();
+      }
+      return;
+    }
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], `NotaVoz_${format(new Date(), 'HHmmss')}.webm`, { type: 'audio/webm' });
+        setNewFiles(prev => [...prev, audioFile]);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Error al acceder al micrófono:", err);
+      alert("No se pudo acceder al micrófono. Verifica los permisos de tu navegador.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const formatRecordingTime = (secs) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   const searchLocation = async () => {
     if (!locationQuery.trim()) return;
@@ -323,7 +393,10 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
         routeDistanceKm: formData.routeDistanceKm,
         fuelConsumption: formData.type === 'car_rental' ? formData.fuelConsumption : '',
         fuelPrice: formData.type === 'car_rental' ? formData.fuelPrice : '',
-        alarmOffset: parseInt(formData.alarmOffset, 10)
+        alarmOffset: parseInt(formData.alarmOffset, 10),
+        hasPendingAction: formData.hasPendingAction,
+        pendingActionText: formData.pendingActionText,
+        personalNotes: formData.personalNotes
       };
 
       if (editingNode) {
@@ -701,13 +774,13 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
             {/* Notas y Coste */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-slate-400 mb-1">Notas extras</label>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Descripción (IA / Oficial)</label>
                 <textarea 
                   rows="3" 
                   value={formData.notes} 
                   onChange={e => setFormData({...formData, notes: e.target.value})} 
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500 resize-y" 
-                  placeholder="Localizador, check-in, info relevante..." 
+                  placeholder="Localizador, check-in, descripción de la IA..." 
                 ></textarea>
               </div>
               <div className="sm:w-1/3">
@@ -740,6 +813,88 @@ export default function NodeModal({ tripId, isOpen, onClose, editingNode = null 
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Nueva Sección: Acción Pendiente */}
+            <div className={`p-4 rounded-2xl border transition-all ${formData.hasPendingAction ? 'bg-red-900/10 border-red-500/30' : 'bg-slate-800/30 border-slate-700'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.hasPendingAction} 
+                    onChange={e => setFormData({...formData, hasPendingAction: e.target.checked})} 
+                    className="w-5 h-5 rounded border-slate-600 text-red-500 focus:ring-red-500 bg-slate-950 shrink-0" 
+                  />
+                  <span className={`text-sm font-medium ${formData.hasPendingAction ? 'text-red-400' : 'text-slate-400'}`}>
+                    <AlertTriangle size={16} className="inline mr-1" /> Marcar con Acción Pendiente (To-Do)
+                  </span>
+                </label>
+              </div>
+              {formData.hasPendingAction && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3">
+                  <input 
+                    type="text" 
+                    value={formData.pendingActionText} 
+                    onChange={e => setFormData({...formData, pendingActionText: e.target.value})} 
+                    className="w-full bg-slate-950 border border-red-500/50 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" 
+                    placeholder="Ej. Llamar para confirmar reserva, Enviar email..." 
+                  />
+                </motion.div>
+              )}
+            </div>
+
+            {/* Nueva Sección: Diario / Notas Personales */}
+            <div className="bg-slate-800/30 p-4 rounded-2xl border border-slate-700 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-teal-400">Diario / Notas Personales</h3>
+                
+                {isRecording ? (
+                  <button 
+                    type="button" 
+                    onClick={stopRecording} 
+                    className="flex items-center gap-1.5 bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all animate-pulse"
+                  >
+                    <Square size={14} fill="currentColor" />
+                    Detener ({formatRecordingTime(recordingTime)})
+                  </button>
+                ) : (
+                  <button 
+                    type="button" 
+                    onClick={startRecording} 
+                    className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-slate-600"
+                  >
+                    <Mic size={14} className={isPremium ? 'text-teal-400' : 'text-amber-400'} />
+                    Grabar Nota de Voz {!isPremium && <Lock size={12} className="text-amber-400 ml-1" />}
+                  </button>
+                )}
+              </div>
+              
+              <textarea 
+                rows="4" 
+                value={formData.personalNotes} 
+                onChange={e => setFormData({...formData, personalNotes: e.target.value})} 
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500 resize-y mb-2" 
+                placeholder="Apunta tus impresiones, recordatorios, o lo que quieras..." 
+              ></textarea>
+              
+              {/* Reproducir Audios Grabados */}
+              {(existingAttachments.some(a => a.name.endsWith('.webm') || a.name.endsWith('.mp4') || a.name.endsWith('.mp3')) || newFiles.some(f => f.name.endsWith('.webm'))) && (
+                <div className="space-y-2 mt-2">
+                  <h4 className="text-xs font-semibold text-slate-400">Notas de Voz Guardadas:</h4>
+                  {existingAttachments.filter(a => a.name.endsWith('.webm') || a.name.endsWith('.mp4') || a.name.endsWith('.mp3')).map((audio, idx) => (
+                    <div key={`ext-audio-${idx}`} className="bg-slate-900 border border-slate-700 rounded-xl p-2 flex items-center justify-between gap-3">
+                      <audio controls src={audio.url} className="h-8 max-w-[200px]" />
+                      <button type="button" onClick={() => removeExistingAttachment(existingAttachments.indexOf(audio))} className="text-red-400 hover:text-red-300 p-1"><XCircle className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                  {newFiles.filter(f => f.name.endsWith('.webm')).map((file, idx) => (
+                    <div key={`new-audio-${idx}`} className="bg-slate-800/80 border border-teal-500/30 p-2 rounded-xl flex items-center justify-between gap-3">
+                      <audio controls src={URL.createObjectURL(file)} className="h-8 max-w-[200px]" />
+                      <button type="button" onClick={() => removeNewFile(newFiles.indexOf(file))} className="text-red-400 hover:text-red-300 p-1"><XCircle className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <button type="submit" disabled={isSubmitting} className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold py-4 rounded-xl shadow-lg transition-all disabled:opacity-50">
