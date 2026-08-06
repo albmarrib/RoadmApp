@@ -7,6 +7,7 @@ import ExpenseModal from '../components/ExpenseModal';
 import { Plus, Receipt, PieChart, Users, ArrowRight, Plane, Hotel, CarFront, MapPin, Route, Settings, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import ContextualTooltip from '../../../components/ui/ContextualTooltip';
 
 export default function ExpensesPage() {
   const { trip } = useOutletContext();
@@ -475,6 +476,13 @@ export default function ExpensesPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         editingExpense={editingExpense}
+      />
+
+      <ContextualTooltip 
+        id="Expenses"
+        title="Finanzas y Cuentas Claras"
+        text="Añade tus tickets en ruta y deja que la IA procese la moneda automáticamente. Si viajáis en grupo (marcado en ajustes), podrás dividir cada gasto y el sistema calculará quién debe a quién."
+        position="top-24 right-4 md:top-auto md:bottom-24 md:right-8" // Placed at top on mobile
       />
     </div>
   );

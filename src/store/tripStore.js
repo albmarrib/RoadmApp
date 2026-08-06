@@ -79,6 +79,7 @@ export const useTripStore = create((set, get) => ({
       const newTrip = {
         title: tripData.title,
         destination: tripData.destination || '',
+        origin: tripData.origin || 'España',
         startDate: tripData.startDate || null,
         endDate: tripData.endDate || null,
         coverImageUrl: coverImageUrl,
@@ -86,11 +87,21 @@ export const useTripStore = create((set, get) => ({
         members: {
           [userId]: 'owner' // El creador es el owner
         },
-        settings: {
-          currency: 'EUR',
-          budget: 0,
-          exchangeRate: 1
-        },
+        // Extras
+        emailAlias: tripData.emailAlias || '',
+        agencyName: tripData.agencyName || '',
+        agencyPhone: tripData.agencyPhone || '',
+        agencyContact: tripData.agencyContact || '',
+        insuranceName: tripData.insuranceName || '',
+        insurancePolicy: tripData.insurancePolicy || '',
+        insurancePhone: tripData.insurancePhone || '',
+        budget: tripData.budget || 0,
+        currency: tripData.currency || 'EUR',
+        exchangeRate: tripData.exchangeRate || 1,
+        isGroupMode: tripData.isGroupMode || false,
+        splitMembers: tripData.splitMembers || [],
+        categories: tripData.categories || ['Comida', 'Transporte', 'Ocio', 'Alojamiento', 'Vuelos', 'Gasolina', 'Supermercado', 'Otros'],
+        defaultAlarmOffset: tripData.defaultAlarmOffset !== undefined ? tripData.defaultAlarmOffset : 1440,
         createdAt: new Date()
       };
       

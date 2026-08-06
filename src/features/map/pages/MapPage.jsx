@@ -7,6 +7,7 @@ import L from 'leaflet';
 import NodeModal from '../../itinerary/components/NodeModal';
 import { Navigation, Loader2, Navigation2, Layers, Bed, Car, Camera, Key, Check, Map as MapIcon, Compass } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ContextualTooltip from '../../../components/ui/ContextualTooltip';
 
 const getCustomIcon = (type) => {
   const baseClass = "w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-white text-white";
@@ -55,6 +56,22 @@ function LocationHandler({ setUserPos, setHasPermissionError }) {
     map.on('locationerror', onLocationError);
     return () => { map.off('locationfound', onLocationFound); map.off('locationerror', onLocationError); map.stopLocate(); };
   }, [map, setUserPos, setHasPermissionError]);
+  return null;
+}
+
+function GeocodeCenterHandler({ destination, shouldGeocode }) {
+  const map = useMap();
+  useEffect(() => {
+    if (shouldGeocode && destination) {
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            map.flyTo([data[0].lat, data[0].lon], 6);
+          }
+        }).catch(console.error);
+    }
+  }, [destination, shouldGeocode, map]);
   return null;
 }
 
@@ -191,8 +208,8 @@ export default function MapPage() {
   
   const savedStateStr = localStorage.getItem(`map_state_${trip?.id}`);
   const savedState = savedStateStr ? JSON.parse(savedStateStr) : null;
-  const defaultCenter = savedState?.center || [-41.2865, 174.7762]; 
-  const defaultZoom = savedState?.zoom || 6;
+  const defaultCenter = savedState?.center || (nodesWithLocation.length > 0 ? [parseFloat(nodesWithLocation[0].location.lat), parseFloat(nodesWithLocation[0].location.lng)] : [40.4168, -3.7038]); 
+  const defaultZoom = savedState?.zoom || (nodesWithLocation.length > 0 ? 10 : 3);
 
   const handleEditNode = (node) => {
     setSelectedNode(node);
@@ -255,11 +272,12 @@ export default function MapPage() {
       <MapContainer center={defaultCenter} zoom={defaultZoom} style={{ height: '100%', width: '100%', zIndex: 0 }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png"
         />
         
         <MapEventsHandler tripId={trip?.id} />
         <LocationHandler setUserPos={setUserPos} setHasPermissionError={setHasPermissionError} />
+        <GeocodeCenterHandler destination={trip?.destination} shouldGeocode={nodesWithLocation.length === 0} />
         <CenterUserButton userPos={userPos} />
 
         {userPos && (
@@ -292,6 +310,13 @@ export default function MapPage() {
           <Polyline positions={polylinePositions} color="#2dd4bf" weight={3} opacity={0.7} dashArray="10, 10" />
         )}
       </MapContainer>
+
+      <ContextualTooltip 
+        id="Map"
+        title="Navegación GPS Integrada"
+        text="Pulsa sobre cualquier marcador de tu ruta y dale a 'Ir' para abrir el GPS de tu móvil y que te guíe directamente hasta allí."
+        position="top-24 right-4 md:top-auto md:bottom-8 md:right-24"
+      />
 
       <NodeModal tripId={trip?.id} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} editingNode={selectedNode} />
     </div>

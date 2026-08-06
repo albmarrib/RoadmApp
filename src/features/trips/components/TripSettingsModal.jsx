@@ -6,6 +6,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { uploadImage } from '../../../utils/storage';
 
 export default function TripSettingsModal({ trip, isOpen, onClose }) {
   const { updateTrip, deleteTrip } = useTripStore();
@@ -13,6 +14,7 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [coverImageFile, setCoverImageFile] = useState(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -62,6 +64,7 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
         categories: trip.categories ? trip.categories.join(', ') : 'Comida, Transporte, Ocio, Alojamiento, Vuelos, Gasolina, Supermercado, Otros',
         defaultAlarmOffset: trip.defaultAlarmOffset !== undefined ? String(trip.defaultAlarmOffset) : '1440'
       });
+      setCoverImageFile(null);
     }
   }, [isOpen, trip]);
 
@@ -72,11 +75,16 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
     setIsSubmitting(true);
     
     try {
+      let finalImageUrl = formData.coverImageUrl;
+      if (coverImageFile) {
+        finalImageUrl = await uploadImage(coverImageFile, `trips/${trip.id}/covers`);
+      }
+
       const updates = {
         title: formData.title,
         origin: formData.origin,
         destination: formData.destination,
-        coverImageUrl: formData.coverImageUrl,
+        coverImageUrl: finalImageUrl,
         agencyName: formData.agencyName,
         agencyPhone: formData.agencyPhone,
         agencyContact: formData.agencyContact,
@@ -207,11 +215,25 @@ export default function TripSettingsModal({ trip, isOpen, onClose }) {
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-400 mb-1">URL Imagen de Portada</label>
-                  <div className="relative">
-                    <ImageIcon className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
-                    <input type="url" value={formData.coverImageUrl} onChange={e => setFormData({...formData, coverImageUrl: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-teal-500" placeholder="https://..." />
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Imagen de Portada (Opcional)</label>
+                  <div className="flex gap-4 items-center">
+                    {formData.coverImageUrl && !coverImageFile && (
+                      <img src={formData.coverImageUrl} alt="Cover" className="w-16 h-16 rounded-lg object-cover" />
+                    )}
+                    {coverImageFile && (
+                      <img src={URL.createObjectURL(coverImageFile)} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
+                    )}
+                    <div className="flex-1 relative">
+                      <ImageIcon className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={e => setCoverImageFile(e.target.files[0])} 
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-500/20 file:text-teal-400 hover:file:bg-teal-500/30 transition-all cursor-pointer" 
+                      />
+                    </div>
                   </div>
+                  <p className="text-[10px] text-slate-500 mt-1">Sube una imagen o deja el campo vacío para mantener la actual.</p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-400 mb-1">Alarma de Calendario por Defecto</label>

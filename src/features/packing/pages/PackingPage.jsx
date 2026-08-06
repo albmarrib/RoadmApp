@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Luggage, Check, Plus, Trash2, ChevronDown, ChevronUp, ScanBarcode, X, Camera, Eye, Compass, MapPin, Save, ThermometerSun } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import WeatherAssistant from '../components/WeatherAssistant';
+import ContextualTooltip from '../../../components/ui/ContextualTooltip';
 
 export default function PackingPage() {
   const { trip } = useOutletContext();
@@ -819,6 +820,12 @@ export default function PackingPage() {
           onClose={() => setIsWeatherAssistantOpen(false)} 
         />
       </AnimatePresence>
+      <ContextualTooltip 
+        id="Packing"
+        title="Checklist y Maletas Inteligentes"
+        text="Usa la checklist para no olvidar nada. Además, escanea el código de barras de tus maletas al facturar y hazles una foto. Será clave si se pierden. Si usas AirTags o SmartTags, regístralos aquí también."
+        position="top-24 right-4 md:top-auto md:bottom-8 md:right-8"
+      />
     </div>
   );
 }
